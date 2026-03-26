@@ -38,9 +38,7 @@ Phase 3 — Domain contracts and abstractions
 - The new repository, map, navigation, and upload contracts remain implementation-free.
 - The mobile app still contains no domain, backend, or provider implementation logic.
 - GitHub repository creation succeeded for public `meniwap/maayanhot`, and `origin` is now configured locally.
-- Local `main` currently contains two unpublished commits:
-  - `5b1f61d` — `Phase 3: add contracts and abstraction ports`
-  - `0618f4e` — `Phase 3: record publication blocker`
+- Local `main` currently contains unpublished Phase 3 commits, and the remote push remains pending until GitHub auth includes `workflow` scope.
 - The first `git push -u origin main` attempt failed with:
   - `refusing to allow an OAuth App to create or update workflow .github/workflows/ci.yml without workflow scope`
 
