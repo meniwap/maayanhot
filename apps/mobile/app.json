@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "Springs Israel",
+    "slug": "springs-israel",
+    "scheme": "springs-israel",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "plugins": ["expo-router"]
+  }
+}

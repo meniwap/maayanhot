@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@maayanhot/contracts": ["packages/contracts/src/index.ts"],
+      "@maayanhot/design-tokens": ["packages/design-tokens/src/index.ts"],
+      "@maayanhot/domain": ["packages/domain/src/index.ts"],
+      "@maayanhot/map-core": ["packages/map-core/src/index.ts"],
+      "@maayanhot/navigation-core": ["packages/navigation-core/src/index.ts"],
+      "@maayanhot/shared-utils": ["packages/shared-utils/src/index.ts"],
+      "@maayanhot/ui": ["packages/ui/src/index.ts"],
+      "@maayanhot/upload-core": ["packages/upload-core/src/index.ts"]
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "maayanhot",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meniwap/maayanhot.git"
+  },
+  "engines": {
+    "node": "24.14.1"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/mobile/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate": "pnpm lint && pnpm format && pnpm typecheck && pnpm test",
+    "mobile:start": "pnpm --filter @maayanhot/mobile start"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@testing-library/react-native": "13.3.3",
+    "@types/react": "19.2.0",
+    "eslint": "10.1.0",
+    "prettier": "3.8.1",
+    "react": "19.2.0",
+    "react-native": "0.83.0",
+    "react-test-renderer": "19.2.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.57.2",
+    "vitest": "4.0.16"
+  }
+}
