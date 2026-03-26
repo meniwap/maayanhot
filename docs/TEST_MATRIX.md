@@ -9,7 +9,7 @@
 
 ## Current Status
 
-Phase 3 now has executable contract/domain tests in place, alongside the Phase 1 tooling validation suite and the Phase 2 UI-foundation tests.
+Phase 8 now adds executable create/report/upload integration tests, device permission tests, upload-core tests, and public-detail/upload database guardrails on top of the earlier phase coverage.
 
 ## Inventory By Category
 
@@ -32,25 +32,31 @@ Phase 3 now has executable contract/domain tests in place, alongside the Phase 1
 | Domain           | Repository contract tests / interface conformance tests                                | 3                 | Complete |
 | Domain           | Map/navigation/upload adapter port conformance tests                                   | 3                 | Complete |
 | Domain           | Validation schema tests                                                                | 3                 | Planned  |
-| Database         | Migration reproducibility test                                                         | 4                 | Planned  |
-| Database         | Schema constraint tests                                                                | 4                 | Planned  |
-| Database         | Geospatial query tests                                                                 | 4                 | Planned  |
-| Database         | Seed integrity smoke test                                                              | 4                 | Planned  |
-| Security         | RLS allow/deny matrix tests                                                            | 5                 | Planned  |
-| Security         | Storage policy access tests                                                            | 5                 | Planned  |
-| Security         | Unauthorized role action tests                                                         | 5                 | Planned  |
-| Map              | Marker rendering tests                                                                 | 6                 | Planned  |
-| Map              | Spring selection tests                                                                 | 6                 | Planned  |
-| Map              | Cluster behavior tests if clustering is enabled                                        | 6                 | Planned  |
-| Map              | Provider abstraction behavior tests                                                    | 6                 | Planned  |
-| Read Flow        | Spring detail integration test                                                         | 7                 | Planned  |
-| Read Flow        | External navigation handoff adapter tests                                              | 7                 | Planned  |
-| Read Flow        | Empty/error state screen tests                                                         | 7                 | Planned  |
-| Create Flow      | Admin create spring integration test                                                   | 8                 | Planned  |
-| Create Flow      | User report submission integration test                                                | 8                 | Planned  |
-| Create Flow      | Photo attach/upload integration test                                                   | 8                 | Planned  |
-| Device           | Camera permission flow test                                                            | 8                 | Planned  |
-| Device           | Gallery permission flow test                                                           | 8                 | Planned  |
+| Database         | Migration reproducibility and config integrity tests                                   | 4                 | Complete |
+| Database         | Schema constraint and contract-alignment tests                                         | 4                 | Complete |
+| Database         | Geospatial schema/index integrity tests                                                | 4                 | Complete |
+| Database         | Seed strategy/config integrity test                                                    | 4                 | Complete |
+| Database         | pgTAP-ready database test files committed under `supabase/tests/database`              | 4                 | Complete |
+| Security         | RLS allow/deny matrix tests                                                            | 5                 | Complete |
+| Security         | Storage policy access tests                                                            | 5                 | Complete |
+| Security         | Unauthorized role action tests                                                         | 5                 | Complete |
+| Map              | Marker rendering tests                                                                 | 6                 | Complete |
+| Map              | Spring selection tests                                                                 | 6                 | Complete |
+| Map              | Cluster behavior tests if clustering is enabled                                        | 6                 | Not used |
+| Map              | Provider abstraction behavior tests                                                    | 6                 | Complete |
+| Map              | Map browse shell rendering and teaser interaction tests                                | 6                 | Complete |
+| Read Flow        | Spring detail integration test                                                         | 7                 | Complete |
+| Read Flow        | External navigation handoff adapter tests                                              | 7                 | Complete |
+| Read Flow        | Empty/error state screen tests                                                         | 7                 | Complete |
+| Create Flow      | Admin create spring integration test                                                   | 8                 | Complete |
+| Create Flow      | User report submission integration test                                                | 8                 | Complete |
+| Create Flow      | Photo attach/upload integration test                                                   | 8                 | Complete |
+| Create Flow      | Slug normalization/conflict unit tests                                                 | 8                 | Complete |
+| Device           | Camera permission flow test                                                            | 8                 | Complete |
+| Device           | Gallery permission flow test                                                           | 8                 | Complete |
+| Upload           | Upload-core MIME/size validation tests                                                 | 8                 | Complete |
+| Upload           | Reserved-slot retry tests                                                              | 8                 | Complete |
+| Database         | Public-safe detail surface and upload-RPC guardrail tests                              | 8                 | Complete |
 | Moderation       | Moderation queue integration test                                                      | 9                 | Planned  |
 | Moderation       | Approve/reject state transition tests                                                  | 9                 | Planned  |
 | Moderation       | Audit trail creation test                                                              | 9                 | Planned  |
@@ -79,7 +85,7 @@ Phase 3 now has executable contract/domain tests in place, alongside the Phase 1
 - Mobile component tests: React Native Testing Library is the intended long-term library, but Phase 2 currently runs a local compatibility harness on top of `react-test-renderer` to keep Vitest as the sole runner
 - Mobile E2E: Maestro
 - Admin web E2E: Playwright
-- Database and policy tests: SQL-based checks plus integration harnesses run from CI
+- Database and policy tests: SQL-based checks plus integration harnesses run from CI; Phase 5 currently commits pgTAP policy suites and backs them with executable Vitest migration guardrails until the Supabase CLI/local stack is available in the environment
 
 Exact tool versions will be pinned when those tools are introduced in code and added to `docs/VERSIONS.md` if they are not already covered by the baseline.
 

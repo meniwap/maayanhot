@@ -5,6 +5,13 @@ import type {
   SpringId,
   WaterPresence,
 } from '@maayanhot/contracts';
+import type { ComponentType } from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
+
+import { MapSurface } from './MapSurface';
+import { CoordinatePickerSurface } from './CoordinatePickerSurface';
+import { buildInitialCameraRequest, buildSelectionCameraRequest } from './camera';
+import { describeMarker } from './presentation';
 
 export type MapViewport = BoundingBox & {
   center?: GeoPoint;
@@ -33,18 +40,70 @@ export type MapCameraRequest = {
   };
 };
 
-export type MapClusterDescriptor = {
-  id: string;
+export type MapSelectionChange = {
+  springId: SpringId | null;
+  source: 'map' | 'marker';
+};
+
+export type MapMarkerAppearance = {
+  fillColor: string;
+  borderColor: string;
+  ringColor: string;
+  ringWidth: number;
+  size: number;
+};
+
+export type MapSurfacePalette = {
+  water: string;
+  noWater: string;
+  unknown: string;
+  stale: string;
+  selectedRing: string;
+  outline: string;
+  markerSurface: string;
+};
+
+export type MapSurfaceProps = {
+  mapStyle?: object | string;
+  markers: MapMarkerDescriptor[];
+  onSelectionChange?: (change: MapSelectionChange) => void;
+  palette: MapSurfacePalette;
+  selectionPaddingBottom?: number;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+  viewport: MapViewport;
+};
+
+export type MapAdapterComponent = ComponentType<MapSurfaceProps>;
+
+export type CoordinatePickerChange = {
   coordinate: GeoPoint;
-  springIds: SpringId[];
-  pointCount: number;
+  source: 'map' | 'manual';
+};
+
+export type CoordinatePickerSurfaceProps = {
+  onChange?: (change: CoordinatePickerChange) => void;
+  palette: MapSurfacePalette;
+  selectedCoordinate: GeoPoint | null;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+  viewport: MapViewport;
 };
 
 export interface MapAdapter {
-  syncAnnotations(input: {
-    markers: MapMarkerDescriptor[];
-    clusters?: MapClusterDescriptor[];
-  }): Promise<void> | void;
-  setViewport(viewport: MapViewport): Promise<void> | void;
-  focusCamera(request: MapCameraRequest): Promise<void> | void;
+  CoordinatePickerSurface: ComponentType<CoordinatePickerSurfaceProps>;
+  Surface: MapAdapterComponent;
 }
+
+export const mapLibreAdapter: MapAdapter = {
+  CoordinatePickerSurface,
+  Surface: MapSurface,
+};
+
+export {
+  CoordinatePickerSurface,
+  MapSurface,
+  buildInitialCameraRequest,
+  buildSelectionCameraRequest,
+  describeMarker,
+};

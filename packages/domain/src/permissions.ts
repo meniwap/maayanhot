@@ -20,4 +20,7 @@ const hasAnyRole = (actor: RoleCarrier, allowedRoles: UserRole[]) => {
 
 export const canCreateSpring = (actor: RoleCarrier) => hasAnyRole(actor, ['admin']);
 
+export const canSubmitReports = (actor: RoleCarrier) =>
+  hasAnyRole(actor, ['user', 'trusted_contributor', 'moderator', 'admin']);
+
 export const canModerateReports = (actor: RoleCarrier) => hasAnyRole(actor, ['moderator', 'admin']);

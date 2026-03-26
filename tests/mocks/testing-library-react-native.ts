@@ -6,8 +6,11 @@ export type RenderOptions = Record<string, never>;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 type Queries = {
+  getAllByTestId: (testID: string) => ReactTestInstance[];
   getByTestId: (testID: string) => ReactTestInstance;
   getByText: (text: string) => ReactTestInstance;
+  queryByTestId: (testID: string) => ReactTestInstance | null;
+  queryByText: (text: string) => ReactTestInstance | null;
 };
 
 let currentRenderer: ReactTestRenderer | null = null;
@@ -58,6 +61,29 @@ const getTextContent = (node: ReactTestInstance): string =>
     .join('');
 
 const createQueries = (): Queries => ({
+  getAllByTestId: (testID: string) => {
+    const matches: ReactTestInstance[] = [];
+
+    const search = (node: ReactTestInstance) => {
+      if (typeof node.type === 'string' && node.props?.testID === testID) {
+        matches.push(node);
+      }
+
+      for (const child of node.children) {
+        if (typeof child === 'object' && child !== null && 'type' in child) {
+          search(child as ReactTestInstance);
+        }
+      }
+    };
+
+    search(getRoot());
+
+    if (matches.length === 0) {
+      throw new Error(`Unable to find any elements with testID "${testID}".`);
+    }
+
+    return matches;
+  },
   getByTestId: (testID: string) => {
     const match = walkTree(
       getRoot(),
@@ -82,6 +108,16 @@ const createQueries = (): Queries => ({
 
     return match;
   },
+  queryByTestId: (testID: string) =>
+    walkTree(
+      getRoot(),
+      (candidate) => typeof candidate.type === 'string' && candidate.props?.testID === testID,
+    ),
+  queryByText: (text: string) =>
+    walkTree(
+      getRoot(),
+      (candidate) => candidate.type === 'Text' && getTextContent(candidate) === text,
+    ),
 });
 
 export const cleanup = () => {
@@ -113,7 +149,35 @@ export const render = (ui: ReactElement) => {
   };
 };
 
+export const waitFor = async <T>(assertion: () => T) => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      let result: T;
+
+      await act(async () => {
+        result = assertion();
+      });
+
+      return result!;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+
+  throw lastError;
+};
+
 export const screen = {
+  getAllByTestId(testID: string) {
+    if (!currentQueries) {
+      throw new Error('screen.getAllByTestId was called before render.');
+    }
+
+    return currentQueries.getAllByTestId(testID);
+  },
   getByTestId(testID: string) {
     if (!currentQueries) {
       throw new Error('screen.getByTestId was called before render.');
@@ -127,5 +191,36 @@ export const screen = {
     }
 
     return currentQueries.getByText(text);
+  },
+  queryByTestId(testID: string) {
+    if (!currentQueries) {
+      throw new Error('screen.queryByTestId was called before render.');
+    }
+
+    return currentQueries.queryByTestId(testID);
+  },
+  queryByText(text: string) {
+    if (!currentQueries) {
+      throw new Error('screen.queryByText was called before render.');
+    }
+
+    return currentQueries.queryByText(text);
+  },
+};
+
+export const fireEvent = {
+  changeText(node: ReactTestInstance, value: string) {
+    act(() => {
+      const onChangeText = node.props.onChangeText as ((nextValue: string) => void) | undefined;
+
+      onChangeText?.(value);
+    });
+  },
+  press(node: ReactTestInstance, payload?: unknown) {
+    act(() => {
+      const onPress = node.props.onPress as ((event?: unknown) => void) | undefined;
+
+      onPress?.(payload);
+    });
   },
 };

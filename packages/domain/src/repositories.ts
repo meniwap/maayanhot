@@ -2,10 +2,13 @@ import type {
   AuditedEntityType,
   BrowseSpringsQuery,
   CreateSpringCommand,
+  IsoTimestampString,
+  MediaId,
   GetSpringDetailQuery,
   ModerateReportCommand,
   ReportId,
   SpringId,
+  UploadLifecycleState,
   SubmitSpringReportCommand,
   UserId,
 } from '@maayanhot/contracts';
@@ -38,6 +41,25 @@ export type SpringDetailAggregate = {
   approvedMedia: SpringMedia[];
 };
 
+export type MediaSlotReservation = {
+  capturedAt: IsoTimestampString | null;
+  mediaId: MediaId;
+  reportId: ReportId;
+  springId: SpringId;
+  storageBucket: string;
+  storagePath: string;
+  uploadState: UploadLifecycleState;
+};
+
+export type FinalizeReportMediaUploadCommand = {
+  byteSize: number | null;
+  capturedAt: IsoTimestampString | null;
+  exifStripped: boolean;
+  height: number | null;
+  mediaId: MediaId;
+  width: number | null;
+};
+
 export interface UserProfileRepository {
   getById(userId: UserId): Promise<UserProfile | null>;
   listByIds(userIds: UserId[]): Promise<UserProfile[]>;
@@ -47,6 +69,7 @@ export interface SpringRepository {
   browse(query: BrowseSpringsQuery): Promise<CursorPage<SpringBrowseItem>>;
   getDetail(query: GetSpringDetailQuery): Promise<SpringDetailAggregate | null>;
   create(command: CreateSpringCommand): Promise<Spring>;
+  findExistingSlugs(baseSlug: string): Promise<string[]>;
 }
 
 export interface SpringReportRepository {
@@ -54,6 +77,12 @@ export interface SpringReportRepository {
   listBySpringId(springId: SpringId): Promise<SpringReport[]>;
   create(command: SubmitSpringReportCommand): Promise<SpringReport>;
   listMediaByReportIds(reportIds: ReportId[]): Promise<Record<ReportId, SpringMedia[]>>;
+  reserveMediaSlot(input: {
+    reportId: ReportId;
+    fileExtension: string | null;
+    capturedAt: IsoTimestampString | null;
+  }): Promise<MediaSlotReservation>;
+  finalizeMediaUpload(command: FinalizeReportMediaUploadCommand): Promise<SpringMedia>;
 }
 
 export interface ModerationQueueRepository {

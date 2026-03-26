@@ -1,0 +1,4 @@
+-- Phase 4 seed baseline intentionally stays empty.
+-- The schema is reproducible from migrations alone.
+-- Later phases can add deterministic auth-backed sample data here
+-- once local auth fixtures and storage flows are established.

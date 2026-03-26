@@ -36,6 +36,8 @@ const createHostComponent = (displayName: string) => {
 export const View = createHostComponent('View');
 export const Text = createHostComponent('Text');
 export const ScrollView = createHostComponent('ScrollView');
+export const Image = createHostComponent('Image');
+export const TextInput = createHostComponent('TextInput');
 export const Pressable = ({ children, ...props }: MockProps) =>
   React.createElement(
     'Pressable',
@@ -56,6 +58,13 @@ export const Platform = {
 
 export const StyleSheet = {
   create: <T extends Record<string, unknown>>(styles: T) => styles,
+  absoluteFillObject: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   flatten: flattenStyle,
   hairlineWidth: 1,
 };

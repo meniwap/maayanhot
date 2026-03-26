@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type UserId = string;
 export type SpringId = string;
 export type ReportId = string;
@@ -70,6 +72,7 @@ export type SpringMediaRecord = {
   id: MediaId;
   springId: SpringId;
   reportId: ReportId;
+  storageBucket: string;
   storagePath: string;
   publicUrl: string | null;
   width: number | null;
@@ -175,3 +178,49 @@ export type ModerateReportCommand = {
   reasonCode?: string | null;
   reasonNote?: string | null;
 };
+
+export const isoTimestampStringSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((value) => !Number.isNaN(Date.parse(value)), 'Expected an ISO-compatible timestamp');
+
+export const geoPointSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+export const springLocationRecordSchema = geoPointSchema.extend({
+  precisionMeters: z.number().int().positive().nullable(),
+});
+
+export const reportLocationEvidenceRecordSchema = z.object({
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
+  precisionMeters: z.number().int().positive().nullable(),
+});
+
+const springSlugSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+
+export const createSpringCommandSchema = z.object({
+  accessNotes: z.string().trim().max(500).nullable().optional(),
+  alternateNames: z.array(z.string().trim().min(1).max(120)).max(12),
+  description: z.string().trim().max(3000).nullable().optional(),
+  isPublished: z.boolean().optional(),
+  location: springLocationRecordSchema,
+  regionCode: z.string().trim().max(64).nullable().optional(),
+  slug: springSlugSchema,
+  title: z.string().trim().min(1).max(120),
+});
+
+export const submitSpringReportCommandSchema = z.object({
+  localMediaDraftIds: z.array(z.string().trim().min(1)).max(8).optional(),
+  locationEvidence: reportLocationEvidenceRecordSchema.optional(),
+  note: z.string().trim().max(2000).nullable().optional(),
+  observedAt: isoTimestampStringSchema,
+  springId: z.string().trim().min(1),
+  waterPresence: z.enum(['water', 'no_water', 'unknown']),
+});

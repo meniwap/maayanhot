@@ -11,6 +11,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@maayanhot/contracts": "workspace:*"
+    "@maayanhot/contracts": "workspace:*",
+    "expo-linking": "~55.0.8"
   }
 }

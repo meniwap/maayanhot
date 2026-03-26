@@ -29,15 +29,52 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
 
 ## Planned Screen Inventory
 
-| Screen              | Purpose                                              | Container responsibilities                                                       | Presenter responsibilities                                          |
-| ------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Map Browse          | Browse springs on a map and select one               | fetch viewport data, handle filters, marker selection, loading/errors            | render map chrome, chips, marker legend, and selected spring teaser |
-| Spring Detail       | Show canonical spring information and current status | fetch detail view, prepare status view model, handle external navigation action  | render hero/gallery/status/evidence summary and action affordances  |
-| Report Compose      | Submit a field report for a spring                   | validate draft, manage permission prompts, orchestrate uploads and submit action | render form fields, photo picker state, validation messaging        |
-| Photo Preview       | Inspect an image attached to a spring or draft       | supply media source and dismissal behavior                                       | render zoomable or full-screen media presentation                   |
-| Profile / Auth      | Show user identity, role, contribution state         | load current profile and capability flags                                        | render profile cards, contribution summaries, settings rows         |
-| Admin Spring Editor | Create or edit a spring as an authorized role        | load/save spring form, gate unauthorized access                                  | render structured spring form UI                                    |
-| Moderation Queue    | Review pending reports                               | fetch queue, trigger approve/reject mutations, surface audit context             | render report cards, moderation actions, decision reasons           |
+| Screen              | Purpose                                              | Container responsibilities                                                       | Presenter responsibilities                                                               |
+| ------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Map Browse          | Browse springs on a map and select one               | fetch viewport data, handle filters, marker selection, loading/errors            | render map chrome, chips, marker legend, and selected spring teaser                      |
+| Spring Detail       | Show canonical spring information and current status | fetch detail view, prepare status view model, handle external navigation action  | render hero/gallery/status summary, approved-photo gallery, and approved-history summary |
+| Report Compose      | Submit a field report for a spring                   | validate draft, manage permission prompts, orchestrate uploads and submit action | render form fields, photo picker state, validation messaging                             |
+| Photo Preview       | Inspect an image attached to a spring or draft       | supply media source and dismissal behavior                                       | render zoomable or full-screen media presentation                                        |
+| Profile / Auth      | Show user identity, role, contribution state         | load current profile and capability flags                                        | render profile cards, contribution summaries, settings rows                              |
+| Admin Spring Editor | Create or edit a spring as an authorized role        | load/save spring form, gate unauthorized access                                  | render structured spring form UI                                                         |
+| Moderation Queue    | Review pending reports                               | fetch queue, trigger approve/reject mutations, surface audit context             | render report cards, moderation actions, decision reasons                                |
+
+## Phase 8 Route Baseline
+
+- `apps/mobile/app/index.tsx` is now the Phase 6 default map-browse route.
+- `apps/mobile/app/foundation-showcase.tsx` keeps the old token/theme proof surface available as an internal non-product route.
+- `apps/mobile/app/springs/[springId].tsx` is now the dedicated Phase 7 spring-detail route.
+- `apps/mobile/app/dev/session.tsx` is now the development-only real-session switcher route.
+- `apps/mobile/app/admin/springs/new.tsx` is now the admin create-spring route.
+- `apps/mobile/app/springs/[springId]/report.tsx` is now the authenticated report-compose route.
+- The default map-browse route renders:
+  - the map surface
+  - marker selection state
+  - a lightweight selected-spring teaser card
+- The teaser may route into the dedicated detail screen, but it must not expand into full detail content in-place.
+- The Phase 7 spring-detail route renders:
+  - read-only public-safe spring metadata
+  - current derived public status
+  - approved/public-safe image gallery
+  - approved/public-safe report history summary
+  - external navigation handoff actions only
+- The Phase 7 read flow does not render:
+  - report compose UI
+  - moderation UI
+  - upload UI
+  - write/edit capabilities
+  - raw report or moderation data
+- The Phase 8 write flow renders:
+  - development-only session switching
+  - admin-gated create-spring form
+  - authenticated report-compose form
+  - photo attachment state
+  - pending-moderation feedback only
+- The Phase 8 write flow must not render:
+  - moderation queue UI
+  - approve/reject controls
+  - trust-management UI
+  - raw storage/provider internals
 
 ## Container / Presenter Boundary
 
@@ -92,6 +129,11 @@ type SpringSummaryVM = {
 };
 ```
 
+Phase 6 note:
+
+- the current map-browse shell now derives `SpringSummaryVM` from repository-backed rows that mirror `public.public_spring_catalog`
+- the browse screen still must not import raw report, moderation, or storage rows directly
+
 ### `SpringDetailVM`
 
 ```ts
@@ -101,6 +143,7 @@ type SpringDetailVM = {
   title: string;
   alternateNames: string[];
   locationLabel: string | null;
+  regionLabel: string | null;
   coordinates: {
     latitude: number;
     longitude: number;
@@ -110,9 +153,11 @@ type SpringDetailVM = {
   status: {
     waterState: 'water' | 'no_water' | 'unknown';
     freshness: 'recent' | 'stale' | 'none';
+    label: string;
+    freshnessLabel: string;
     confidenceLabel: string;
     lastApprovedObservationAt: string | null;
-    sourceReportCount: number;
+    approvedHistoryCount: number;
   };
   gallery: Array<{
     id: string;
@@ -124,15 +169,18 @@ type SpringDetailVM = {
     reportId: string;
     observedAt: string;
     waterState: 'water' | 'no_water' | 'unknown';
-    reporterTrustLabel: string;
+    label: string;
+    photoCount: number;
   }>;
-  availableActions: {
-    canSubmitReport: boolean;
-    canOpenExternalNavigation: boolean;
-    canEditSpring: boolean;
-  };
 };
 ```
+
+Phase 7 detail note:
+
+- `SpringDetailVM` is public-safe and read-only in this phase
+- it must not expose moderator identities, reviewer notes, trust labels, audit metadata, or raw moderation states
+- external navigation providers are triggered through callbacks and `packages/navigation-core`, not by embedding provider URLs or SDK calls in presenters
+- the current detail screen now receives repository-backed public-safe data rather than local product fixtures
 
 ### `ReportDraftVM`
 
@@ -182,23 +230,54 @@ Phase 2 shipped reusable presentational components:
 
 These components are design-token driven and business-logic free.
 
-Deferred beyond Phase 2:
+Shipped in Phase 8 for write flows:
 
-- `IconButton`
 - `TextField`
 - `TextAreaField`
 - `PhotoTile`
+
+Still deferred:
+
+- `IconButton`
 - `EmptyState`
 - `ErrorState`
 - `LoadingState`
 
-Deferred components stay planned, but they are not implemented in code yet and must not be assumed available by feature work.
+Shipped form/media primitives remain presentational only. They must not gain direct repository, Supabase, storage, or platform side effects.
 
 ## Shell Proof Surface
 
-- `apps/mobile/app/index.tsx` is a shell-only foundation showcase.
-- It exists only to prove theme swapping, RTL-aware composition, typography, spacing, and primitive usage.
-- It is not a product feature screen and must not gain repositories, backend calls, domain logic, map logic, upload logic, or moderation behavior in Phase 2.
+- `apps/mobile/app/foundation-showcase.tsx` is now the shell-only foundation showcase.
+- It still exists only to prove theme swapping, RTL-aware composition, typography, spacing, and primitive usage.
+- It is not a product feature screen and must not gain repositories, backend calls, domain logic, map logic, upload logic, or moderation behavior.
+
+## Phase 6 And Phase 7 Browse/Read Notes
+
+- The selected marker interaction is intentionally teaser-only in Phase 6.
+- The teaser may show:
+  - spring title
+  - region label
+  - public-safe derived status label
+  - last approved observation date if available
+- The teaser must not show:
+  - raw reports
+  - moderation internals
+  - uploader identity
+  - admin or moderation actions
+- The dedicated Phase 7 detail route may show:
+  - canonical public-safe spring fields
+  - current derived public status
+  - approved/public-safe gallery items
+  - approved/public-safe history summary rows
+  - external navigation buttons that emit app ids through callbacks
+- The dedicated Phase 7 detail route must not show:
+  - raw report notes
+  - reviewer identity
+  - trust labels
+  - audit metadata
+  - write/edit/report buttons
+- The route must consume `packages/map-core` only, not direct provider SDK imports.
+- Clustering is intentionally not enabled in Phase 6.
 
 ## State Ownership Rules
 
@@ -206,6 +285,33 @@ Deferred components stay planned, but they are not implemented in code yet and m
 - Local cross-screen UI state belongs in scoped Zustand stores only when it is not domain truth.
 - Form drafts belong to feature-local state or draft abstractions, not global domain stores.
 - Status derivation and role/trust calculations belong in the domain/application layer, not UI stores.
+
+## Phase 8 Write-Flow Notes
+
+- The development session switcher is development-only and env-gated.
+- The admin create screen may use:
+  - title
+  - editable slug
+  - alternate names
+  - region code
+  - access notes
+  - description
+  - coordinate picker plus numeric refinement
+  - draft/published toggle
+- The admin create screen must not:
+  - call Supabase directly
+  - compute role authorization in presenters
+  - expose moderation or audit controls
+- The report compose screen may use:
+  - observed time
+  - water state
+  - note
+  - photo-attachment state
+  - retry messaging for failed uploads
+- The report compose screen must not:
+  - expose raw moderation state
+  - publish report content immediately
+  - call storage providers directly from the presenter
 
 ## UI-Only Agent Permissions
 

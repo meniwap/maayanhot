@@ -2,20 +2,52 @@
 
 ## Current Phase
 
-Phase 3 — Domain contracts and abstractions
+Phase 8 — Create spring, report submission, and upload baseline
 
 ## Done
 
-- Re-read the control docs before beginning Phase 3 work.
-- Claimed the Phase 3 docs, package manifests, source files, and new test files in `docs/ANDI.md`.
-- Renamed the internal technical baseline from `mayyanhot` / `@mayyanhot/*` to `maayanhot` / `@maayanhot/*` across workspace packages, aliases, imports, and repo metadata.
-- Added `packages/contracts` as the shared serializable contract layer.
-- Added `packages/domain` with read-only domain entities, pure permission guards, configurable status derivation, and repository ports only.
-- Activated `packages/map-core`, `packages/navigation-core`, and `packages/upload-core` as interface-only adapter packages with no provider implementations.
-- Documented the package ownership and boundary rules in `docs/API_CONTRACT.md`.
-- Added Phase 3 runtime tests for status derivation and permission guards.
-- Added Phase 3 interface-conformance tests for repository ports and provider-neutral adapter ports.
-- Kept UI packages UI-only and kept backend/provider logic out of Phase 3 entirely.
+- Re-read the control docs before beginning Phase 8 work.
+- Claimed the Phase 8 route, infrastructure, repository, migration, test, and documentation files in `docs/ANDI.md`.
+- Re-verified the current stable baselines for `@supabase/supabase-js`, `@tanstack/react-query`, `zod`, and `expo-image-picker` from official sources and pinned them in the repo.
+- Retrieved the linked public Supabase API key set safely and kept tracked files secret-free.
+- Fixed the hosted-safe Phase 5 storage policy migration syntax and successfully applied:
+  - `20260326193000_phase5_security.sql`
+  - `20260326210000_phase8_public_detail_and_upload.sql`
+    to the linked remote project `maayanhot` with `npx supabase db push --linked`.
+- Added the first app-local mobile infrastructure layer under `apps/mobile/src/infrastructure/`:
+  - public-safe read repositories
+  - spring/report write repositories
+  - Supabase client bootstrap
+  - TanStack Query provider setup
+  - create/report flow services
+- Replaced fixture-backed product reads with repository-backed public-safe reads for:
+  - map browse via `public.public_spring_catalog`
+  - spring detail via `public.public_spring_detail`, `public.public_spring_detail_media`, and `public.public_spring_detail_history`
+- Added a development-only real-session switcher at `apps/mobile/app/dev/session.tsx` backed by actual Supabase auth sessions.
+- Added the admin create spring flow at `apps/mobile/app/admin/springs/new.tsx`.
+- Added the user report compose flow at `apps/mobile/app/springs/[springId]/report.tsx`.
+- Added the first write-flow shared UI primitives:
+  - `TextField`
+  - `TextAreaField`
+  - `PhotoTile`
+- Added Phase 8 contract/domain work:
+  - Zod schemas for create/report commands
+  - `canSubmitReports`
+  - slug normalization and conflict helpers
+- Added the first concrete upload pipeline baseline in `packages/upload-core`:
+  - slot-aware `PendingUpload`
+  - MIME/size validation
+  - Supabase storage adapter
+  - retry against the same reserved slot
+- Added the Phase 8 database surfaces:
+  - `public.public_spring_detail`
+  - `public.public_spring_detail_media`
+  - `public.public_spring_detail_history`
+  - `public.admin_create_spring(...)`
+  - `public.create_report_media_slot(...)`
+  - `public.finalize_report_media_upload(...)`
+- Added Phase 8 integration, UI, upload, and database guardrail tests.
+- Ran the full suite successfully under Node `24.14.1`.
 
 ## In Progress
 
@@ -23,56 +55,57 @@ Phase 3 — Domain contracts and abstractions
 
 ## Blocked
 
-- GitHub publication is partially complete:
-  - the public repository `meniwap/maayanhot` exists
-  - local `origin` points to `https://github.com/meniwap/maayanhot.git`
-  - the first `git push -u origin main` was rejected because the current GitHub OAuth app token does not have `workflow` scope for `.github/workflows/ci.yml`
+- GitHub publication remains blocked because the current GitHub OAuth app token still does not have `workflow` scope for `.github/workflows/ci.yml`.
 
 ## Just Verified
 
-- `pnpm typecheck` passed after adding the contract/domain packages and the workspace rename.
-- `pnpm install` completed successfully under Node `24.14.1` after the workspace rename and package additions.
-- `pnpm validate` passed end to end under Node `24.14.1`.
-- `pnpm test` passed with the new Phase 3 domain and interface-conformance tests added.
-- The new status derivation remains pure and UI-agnostic.
-- The new repository, map, navigation, and upload contracts remain implementation-free.
-- The mobile app still contains no domain, backend, or provider implementation logic.
-- GitHub repository creation succeeded for public `meniwap/maayanhot`, and `origin` is now configured locally.
-- Local `main` currently contains unpublished Phase 3 commits, and the remote push remains pending until GitHub auth includes `workflow` scope.
-- The first `git push -u origin main` attempt failed with:
-  - `refusing to allow an OAuth App to create or update workflow .github/workflows/ci.yml without workflow scope`
+- The linked remote Supabase project `maayanhot` exists, remains linked locally as `xcjjvundvdpkxnkkkplp`, and now has the Phase 5 + Phase 8 migrations applied.
+- The mobile app now reads public browse/detail data through repositories against the approved public-safe surfaces instead of through local product fixtures.
+- An authenticated admin can create draft and published springs through the Phase 8 flow.
+- An authenticated user can submit a report with optional photo attachments, and failed uploads stay retryable against the same reserved media slot.
+- Device permission denial paths for camera and gallery are covered in the current test suite.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 && pnpm validate` passed, including lint, format, typecheck, and 23 passing test files / 75 passing tests.
+- `git push -u origin main` still fails because the current GitHub OAuth token does not include `workflow` scope.
 
 ## Remaining In Current Phase
 
-- Nothing. Phase 3 is complete.
+- None. Phase 8 is complete and waiting for explicit Phase 9 authorization.
 
 ## Next Smallest Sensible Step
 
-Begin Phase 4 only after approval:
+Begin Phase 9 only after approval:
 
-- create Supabase project structure using the exact project name `maayanhot`
-- add Postgres/PostGIS schema design and migrations
-- add reproducible migration and schema integrity tests
-- keep all backend work behind the Phase 3 contracts and ports
+- add moderation queue/read surfaces
+- add approve/reject actions
+- add audit-linked moderation transitions
+- keep public read flows unchanged until approval occurs
 
-GitHub publication follow-up, when auth is fixed:
+GitHub publication follow-up, when auth scope is fixed:
 
-- refresh GitHub auth with `workflow` scope or use a token that has it
-- rerun `git push -u origin main`
+- refresh GitHub auth so the token includes `workflow` scope
+- run `git push -u origin main`
 
 ## Contracts Changed This Session
 
-- `docs/API_CONTRACT.md` now reflects the implemented `packages/contracts`, `packages/domain`, `packages/map-core`, `packages/navigation-core`, and `packages/upload-core` ownership boundaries.
-- The domain layer now uses `waterPresence` terminology internally, while the UI contract still exposes `waterState` in presenter-facing view models.
-- Repository ports and adapter ports are now implemented as code, not just planned docs.
+- `docs/API_CONTRACT.md` now documents the Phase 8 repository-backed public detail surfaces, write RPCs, upload-slot flow, and development bootstrap expectations.
+- `docs/UI_CONTRACT.md` now records the repository-backed map/detail reads, the dev-session route, the admin create spring route, the report compose route, and the newly shipped form/media primitives.
+- Shared contract/domain files changed in a bounded way:
+  - Zod validation schemas were added in `packages/contracts`
+  - slug helpers and `canSubmitReports` were added in `packages/domain`
+  - upload slot/finalize repository contracts were added in `packages/domain`
 
 ## Versions Changed This Session
 
-- None.
+- `@supabase/supabase-js` pinned to `2.100.1`
+- `@tanstack/react-query` pinned to `5.95.2`
+- `zod` pinned to `4.3.6`
+- `expo-image-picker` pinned to `~17.0.8`
 
 ## Risks Carried Forward
 
-- Supabase-hosted PostgreSQL/PostGIS patch levels must still be confirmed when Phase 4 provisions infrastructure.
+- The first demo admin still requires a one-time SQL bootstrap in the linked Supabase project before the dev-session switcher can exercise the admin flow end to end.
 - The MapLibre React Native package must remain on the stable non-beta line unless explicitly re-approved later.
+- Native verification for MapLibre still requires a development build and is not covered by Expo Go.
 - The future Next.js baseline should still be re-verified again closer to Phase 13 rather than assumed indefinitely.
 - The Phase 2 UI test harness still uses `react-test-renderer` under Vitest and should be revisited when the mobile test stack expands.
+- GitHub publication still needs refreshed auth with `workflow` scope before the local `main` branch can be pushed.

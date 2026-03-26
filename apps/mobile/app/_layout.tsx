@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import HeeboVariable from '../assets/fonts/Heebo-Variable.ttf';
+import { AppProviders } from '../src/infrastructure/providers/AppProviders';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -16,8 +17,10 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider direction="rtl" initialTheme={springLightTheme}>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <AppProviders>
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false }} />
+      </AppProviders>
     </ThemeProvider>
   );
 }

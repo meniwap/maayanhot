@@ -16,6 +16,14 @@ export default defineConfig({
       '@maayanhot/map-core': fileURLToPath(
         new URL('./packages/map-core/src/index.ts', import.meta.url),
       ),
+      '@maplibre/maplibre-react-native': fileURLToPath(
+        new URL('./tests/mocks/maplibre-react-native.ts', import.meta.url),
+      ),
+      'expo-image-picker': fileURLToPath(
+        new URL('./tests/mocks/expo-image-picker.ts', import.meta.url),
+      ),
+      'expo-linking': fileURLToPath(new URL('./tests/mocks/expo-linking.ts', import.meta.url)),
+      'expo-router': fileURLToPath(new URL('./tests/mocks/expo-router.ts', import.meta.url)),
       '@maayanhot/navigation-core': fileURLToPath(
         new URL('./packages/navigation-core/src/index.ts', import.meta.url),
       ),

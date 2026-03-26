@@ -32,6 +32,7 @@ const makeMedia = (reportId: ReportId): SpringMedia => ({
   id: `media-${reportId}`,
   springId,
   reportId,
+  storageBucket: 'report-media',
   storagePath: `reports/${reportId}/cover.jpg`,
   publicUrl: `https://example.com/${reportId}.jpg`,
   width: 1200,

@@ -8,9 +8,11 @@ export type {
   SpringStatusProjection,
   UserProfile,
 } from './entities';
-export { canCreateSpring, canModerateReports } from './permissions';
+export { canCreateSpring, canModerateReports, canSubmitReports } from './permissions';
 export type {
   CursorPage,
+  FinalizeReportMediaUploadCommand,
+  MediaSlotReservation,
   SpringBrowseItem,
   SpringDetailAggregate,
   AuditLogRepository,
@@ -20,6 +22,11 @@ export type {
   SpringStatusProjectionRepository,
   UserProfileRepository,
 } from './repositories';
+export {
+  generateSpringSlugFromTitle,
+  normalizeSpringSlug,
+  resolveSpringSlugConflict,
+} from './slug';
 export {
   defaultStatusDerivationPolicy,
   deriveSpringStatusProjection,

@@ -2,6 +2,7 @@ import type {
   AuditEntryRecord,
   BrowseSpringsQuery,
   CreateSpringCommand,
+  GetSpringDetailQuery,
   ModerateReportCommand,
   SpringReportRecord,
   SubmitSpringReportCommand,
@@ -85,6 +86,7 @@ const sampleMedia: SpringMedia = {
   id: 'media-1',
   springId: 'spring-1',
   reportId: 'report-1',
+  storageBucket: 'report-media',
   storagePath: 'reports/report-1/cover.jpg',
   publicUrl: 'https://example.com/report-1.jpg',
   width: 1200,
@@ -149,17 +151,30 @@ const springRepository = {
 
     return sampleBrowsePage;
   },
-  getDetail: async () => sampleDetailAggregate,
+  getDetail: async (query: GetSpringDetailQuery) => {
+    void query;
+
+    return sampleDetailAggregate;
+  },
   create: async (command: CreateSpringCommand) => {
     void command;
 
     return sampleSpring;
   },
+  findExistingSlugs: async () => ['ein-karem'],
 } satisfies SpringRepository;
 
 const springReportRepository = {
-  getById: async () => sampleReport,
-  listBySpringId: async () => [sampleReport],
+  getById: async (reportId: string) => {
+    void reportId;
+
+    return sampleReport;
+  },
+  listBySpringId: async (springId: string) => {
+    void springId;
+
+    return [sampleReport];
+  },
   create: async (command: SubmitSpringReportCommand) => {
     void command;
 
@@ -168,6 +183,26 @@ const springReportRepository = {
   listMediaByReportIds: async () => ({
     'report-1': [sampleMedia],
   }),
+  reserveMediaSlot: async (input: Parameters<SpringReportRepository['reserveMediaSlot']>[0]) => {
+    void input;
+
+    return {
+      capturedAt: sampleMedia.capturedAt,
+      mediaId: sampleMedia.id,
+      reportId: sampleMedia.reportId,
+      springId: sampleMedia.springId,
+      storageBucket: sampleMedia.storageBucket,
+      storagePath: sampleMedia.storagePath,
+      uploadState: 'pending',
+    };
+  },
+  finalizeMediaUpload: async (
+    command: Parameters<SpringReportRepository['finalizeMediaUpload']>[0],
+  ) => {
+    void command;
+
+    return sampleMedia;
+  },
 } satisfies SpringReportRepository;
 
 const moderationQueueRepository = {
@@ -201,9 +236,8 @@ const springStatusProjectionRepository = {
 } satisfies SpringStatusProjectionRepository;
 
 const mapAdapter = {
-  syncAnnotations: async () => undefined,
-  setViewport: async () => undefined,
-  focusCamera: async () => undefined,
+  CoordinatePickerSurface: (() => null) as MapAdapter['CoordinatePickerSurface'],
+  Surface: (() => null) as MapAdapter['Surface'],
 } satisfies MapAdapter;
 
 const navigationAdapter = {
