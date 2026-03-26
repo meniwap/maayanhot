@@ -23,7 +23,10 @@ Phase 3 — Domain contracts and abstractions
 
 ## Blocked
 
-- None.
+- GitHub publication is partially complete:
+  - the public repository `meniwap/maayanhot` exists
+  - local `origin` points to `https://github.com/meniwap/maayanhot.git`
+  - the first `git push -u origin main` was rejected because the current GitHub OAuth app token does not have `workflow` scope for `.github/workflows/ci.yml`
 
 ## Just Verified
 
@@ -35,6 +38,9 @@ Phase 3 — Domain contracts and abstractions
 - The new repository, map, navigation, and upload contracts remain implementation-free.
 - The mobile app still contains no domain, backend, or provider implementation logic.
 - GitHub repository creation succeeded for public `meniwap/maayanhot`, and `origin` is now configured locally.
+- The initial local commit was created as `5b1f61d` on `main`.
+- The first `git push -u origin main` attempt failed with:
+  - `refusing to allow an OAuth App to create or update workflow .github/workflows/ci.yml without workflow scope`
 
 ## Remaining In Current Phase
 
@@ -48,6 +54,11 @@ Begin Phase 4 only after approval:
 - add Postgres/PostGIS schema design and migrations
 - add reproducible migration and schema integrity tests
 - keep all backend work behind the Phase 3 contracts and ports
+
+GitHub publication follow-up, when auth is fixed:
+
+- refresh GitHub auth with `workflow` scope or use a token that has it
+- rerun `git push -u origin main`
 
 ## Contracts Changed This Session
 

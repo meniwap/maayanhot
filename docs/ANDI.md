@@ -35,14 +35,19 @@ Phase 3 close-out
 - 2026-03-26: Phase 3 packages `@maayanhot/contracts`, `@maayanhot/domain`, `@maayanhot/map-core`, `@maayanhot/navigation-core`, and `@maayanhot/upload-core` were added with pure contracts and interface-only abstractions.
 - 2026-03-26: `pnpm install` and `pnpm validate` passed under Node `24.14.1` after the Phase 3 implementation and workspace rename to `@maayanhot/*`.
 - 2026-03-26: Public GitHub repository `meniwap/maayanhot` was created and configured as the local `origin` remote.
+- 2026-03-26: Local root commit `5b1f61d` was created on `main`.
 
 ## Next Required Action
 
 Wait for explicit authorization before beginning Phase 4.
 
+If GitHub publication needs to be completed before the next phase, refresh auth with `workflow` scope and rerun:
+
+- `git push -u origin main`
+
 ## Blockers
 
-- None.
+- Current GitHub OAuth app auth does not have `workflow` scope, so the first push of `main` to `origin` was rejected because the repo contains `.github/workflows/ci.yml`.
 
 ## Recent Decision Summary
 
@@ -58,6 +63,7 @@ Wait for explicit authorization before beginning Phase 4.
 - Keep the first UI tests on Vitest, but note that the current node-only baseline uses a local `react-test-renderer` compatibility harness instead of the full `@testing-library/react-native` runtime import path.
 - Align internal technical naming to `maayanhot`, including the workspace scope `@maayanhot/*`, the public GitHub repo name `maayanhot`, and the future Supabase project name `maayanhot`.
 - Keep shared serializable contracts in `packages/contracts`, pure domain rules and repository ports in `packages/domain`, and provider-neutral map/navigation/upload ports in separate interface-only packages.
+- Keep the local filesystem path unchanged for now; only technical identifiers and remote naming were aligned in Phase 3.
 
 ## What Every Agent Must Read Before Editing Anything
 
