@@ -34,7 +34,7 @@ Complete. Phase 12 now provides client-side search, filters, lightweight sorting
 
 ## Next Required Action
 
-- Commit the validated Phase 12 work, push it to GitHub, and wait for explicit authorization before Phase 13.
+- Wait for explicit authorization before Phase 13.
 
 ## Blockers
 
