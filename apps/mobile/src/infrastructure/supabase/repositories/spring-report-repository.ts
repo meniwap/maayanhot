@@ -9,6 +9,7 @@ import type { ReportId, SpringId, SubmitSpringReportCommand } from '@maayanhot/c
 import { getSupabaseClient } from '../client';
 
 type SpringReportRow = {
+  client_submission_id: string | null;
   id: string;
   latest_moderated_at: string | null;
   location_evidence: string | null;
@@ -26,6 +27,7 @@ type SpringReportRow = {
 type SpringMediaRow = {
   byte_size: number | null;
   captured_at: string | null;
+  client_media_draft_id: string | null;
   created_at: string;
   exif_stripped: boolean;
   height: number | null;
@@ -75,6 +77,28 @@ const toSpringMedia = (row: SpringMediaRow): SpringMedia => ({
   width: row.width,
 });
 
+export class SupabaseRepositoryError extends Error {
+  code: string | null;
+  statusCode: number | null;
+
+  constructor(message: string, options?: { code?: string | null; statusCode?: number | null }) {
+    super(message);
+    this.name = 'SupabaseRepositoryError';
+    this.code = options?.code ?? null;
+    this.statusCode = options?.statusCode ?? null;
+  }
+}
+
+const toRepositoryError = (error: {
+  code?: string | null;
+  message: string;
+  status?: number | null;
+}) =>
+  new SupabaseRepositoryError(error.message, {
+    code: error.code ?? null,
+    statusCode: error.status ?? null,
+  });
+
 const toMediaSlotReservation = (row: SpringMediaRow): MediaSlotReservation => ({
   capturedAt: row.captured_at,
   mediaId: row.id,
@@ -95,7 +119,7 @@ export class SupabaseSpringReportRepository implements SpringReportRepository {
       .maybeSingle();
 
     if (error) {
-      throw new Error(error.message);
+      throw toRepositoryError(error);
     }
 
     return data ? toSpringReport(data as SpringReportRow) : null;
@@ -110,7 +134,7 @@ export class SupabaseSpringReportRepository implements SpringReportRepository {
       .order('submitted_at', { ascending: false });
 
     if (error) {
-      throw new Error(error.message);
+      throw toRepositoryError(error);
     }
 
     return (data ?? []).map((row) => toSpringReport(row as SpringReportRow));
@@ -118,19 +142,16 @@ export class SupabaseSpringReportRepository implements SpringReportRepository {
 
   async create(command: SubmitSpringReportCommand) {
     const client = getSupabaseClient();
-    const { data, error } = await client
-      .from('spring_reports')
-      .insert({
-        note: command.note ?? null,
-        observed_at: command.observedAt,
-        spring_id: command.springId,
-        water_presence: command.waterPresence,
-      })
-      .select('*')
-      .single();
+    const { data, error } = await client.rpc('submit_spring_report', {
+      target_client_submission_id: command.clientSubmissionId,
+      target_note: command.note ?? null,
+      target_observed_at: command.observedAt,
+      target_spring_id: command.springId,
+      target_water_presence: command.waterPresence,
+    });
 
     if (error) {
-      throw new Error(error.message);
+      throw toRepositoryError(error);
     }
 
     return toSpringReport(data as SpringReportRow);
@@ -146,7 +167,7 @@ export class SupabaseSpringReportRepository implements SpringReportRepository {
       .order('created_at', { ascending: true });
 
     if (error) {
-      throw new Error(error.message);
+      throw toRepositoryError(error);
     }
 
     return (data ?? []).reduce<Record<ReportId, SpringMedia[]>>((accumulator, row) => {
@@ -161,18 +182,20 @@ export class SupabaseSpringReportRepository implements SpringReportRepository {
 
   async reserveMediaSlot(input: {
     reportId: ReportId;
+    clientMediaDraftId: string;
     fileExtension: string | null;
     capturedAt: string | null;
   }) {
     const client = getSupabaseClient();
-    const { data, error } = await client.rpc('create_report_media_slot', {
+    const { data, error } = await client.rpc('reserve_report_media_slot', {
       captured_at: input.capturedAt,
       file_extension: input.fileExtension,
+      target_client_media_draft_id: input.clientMediaDraftId,
       target_report_id: input.reportId,
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw toRepositoryError(error);
     }
 
     return toMediaSlotReservation(data as SpringMediaRow);
@@ -190,7 +213,7 @@ export class SupabaseSpringReportRepository implements SpringReportRepository {
     });
 
     if (error) {
-      throw new Error(error.message);
+      throw toRepositoryError(error);
     }
 
     return toSpringMedia(data as SpringMediaRow);

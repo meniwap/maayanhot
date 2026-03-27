@@ -14,7 +14,7 @@ select ok(
   'private.sync_trusted_contributor_role function should exist'
 );
 
-select like(
+select ok(
   lower((
     select pg_get_functiondef(proc.oid)
     from pg_proc as proc
@@ -23,12 +23,11 @@ select like(
     where namespace.nspname = 'private'
       and proc.proname = 'sync_trusted_contributor_role'
     limit 1
-  )),
-  '%system.phase10_trust_progression%',
+  )) like '%system.phase10_trust_progression%',
   'trusted contributor sync should use an explicit system grant_source'
 );
 
-select like(
+select ok(
   lower((
     select pg_get_functiondef(proc.oid)
     from pg_proc as proc
@@ -37,8 +36,7 @@ select like(
     where namespace.nspname = 'public'
       and proc.proname = 'refresh_user_report_snapshot'
     limit 1
-  )),
-  '%perform private.sync_trusted_contributor_role(target_user_id)%',
+  )) like '%perform private.sync_trusted_contributor_role(target_user_id)%',
   'refresh_user_report_snapshot should trigger trusted contributor sync'
 );
 
@@ -54,7 +52,7 @@ select ok(
   'staff_upsert_spring_status_projection should still exist after hardening'
 );
 
-select like(
+select ok(
   lower((
     select pg_get_functiondef(proc.oid)
     from pg_proc as proc
@@ -63,12 +61,11 @@ select like(
     where namespace.nspname = 'public'
       and proc.proname = 'staff_upsert_spring_status_projection'
     limit 1
-  )),
-  '%where public.spring_status_projections.recalculated_at <= excluded.recalculated_at%',
+  )) like '%where public.spring_status_projections.recalculated_at <= excluded.recalculated_at%',
   'projection upsert should reject stale recalculations'
 );
 
-select like(
+select ok(
   lower((
     select pg_get_functiondef(proc.oid)
     from pg_proc as proc
@@ -77,8 +74,7 @@ select like(
     where namespace.nspname = 'public'
       and proc.proname = 'staff_upsert_spring_status_projection'
     limit 1
-  )),
-  '%if upserted_row is null then%',
+  )) like '%if upserted_row is null then%',
   'projection upsert should return the existing cached row after a stale write attempt'
 );
 

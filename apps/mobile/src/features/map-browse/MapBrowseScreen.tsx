@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useDevSession } from '../dev-session/DevSessionProvider';
+import { useOfflineReportQueue } from '../../infrastructure/offline/OfflineReportQueueProvider';
 import { publicSpringReadRepository } from '../../infrastructure/supabase/repositories/public-spring-read-repository';
 import { SelectedSpringTeaser } from './SelectedSpringTeaser';
 import { initialIsraelViewport } from './public-spring-catalog';
@@ -20,6 +21,7 @@ export function MapBrowseScreen() {
   const tokens = useTokens();
   const router = useRouter();
   const { snapshot } = useDevSession();
+  const offlineQueue = useOfflineReportQueue();
   const [selectedSpringId, setSelectedSpringId] = useState<string | null>(null);
   const MapSurface = mapLibreAdapter.Surface;
   const catalogQuery = useQuery({
@@ -63,11 +65,13 @@ export function MapBrowseScreen() {
     ? 'חסרים משתני Supabase ציבוריים ולכן הקטלוג עדיין לא נטען.'
     : catalogQuery.isLoading
       ? 'טוען את קטלוג המעיינות הציבורי מהפרויקט המקושר.'
-      : catalogQuery.isError
+      : catalogQuery.isError && !catalogQuery.data
         ? 'טעינת הקטלוג נכשלה. בסיס המפה מוכן, אבל הקריאה הציבורית דורשת בדיקת חיבור.'
-        : springs.length === 0
-          ? 'עדיין אין מעיינות פומביים בקטלוג המקושר. מנהל יכול ליצור מעיין חדש מכאן.'
-          : `${springs.length} מעיינות פומביים נטענו מהקריאה המאושרת לציבור.`;
+        : !offlineQueue.snapshot.isOnline && springs.length > 0
+          ? `מוצגים ${springs.length} מעיינות מהמטמון הציבורי המקומי. אריחי מפה מלאים דורשים חיבור.`
+          : springs.length === 0
+            ? 'עדיין אין מעיינות פומביים בקטלוג המקושר. מנהל יכול ליצור מעיין חדש מכאן.'
+            : `${springs.length} מעיינות פומביים נטענו מהקריאה המאושרת לציבור.`;
 
   return (
     <View

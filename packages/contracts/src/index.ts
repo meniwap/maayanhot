@@ -204,6 +204,7 @@ export type CreateSpringCommand = {
 };
 
 export type SubmitSpringReportCommand = {
+  clientSubmissionId: string;
   springId: SpringId;
   observedAt: IsoTimestampString;
   waterPresence: WaterPresence;
@@ -264,6 +265,7 @@ export const createSpringCommandSchema = z.object({
 });
 
 export const submitSpringReportCommandSchema = z.object({
+  clientSubmissionId: z.string().trim().uuid(),
   localMediaDraftIds: z.array(z.string().trim().min(1)).max(8).optional(),
   locationEvidence: reportLocationEvidenceRecordSchema.optional(),
   note: z.string().trim().max(2000).nullable().optional(),

@@ -56,6 +56,21 @@ export const Platform = {
   select: <T>(choices: { default?: T; ios?: T }) => choices.ios ?? choices.default,
 };
 
+const appStateListeners = new Set<(state: string) => void>();
+
+export const AppState = {
+  addEventListener: (_eventType: 'change', listener: (state: string) => void) => {
+    appStateListeners.add(listener);
+
+    return {
+      remove: () => {
+        appStateListeners.delete(listener);
+      },
+    };
+  },
+  currentState: 'active',
+};
+
 export const StyleSheet = {
   create: <T extends Record<string, unknown>>(styles: T) => styles,
   absoluteFillObject: {

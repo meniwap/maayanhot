@@ -2,28 +2,26 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import IndexRoute from '../../apps/mobile/app/index';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { publicSpringCatalogFixture } from '../fixtures/public-spring-data';
 import { __resetRouterMocks } from '../mocks/expo-router';
 
 import { renderWithTheme } from './render-with-theme';
 
+const { publicSpringReadRepositoryMock } = vi.hoisted(() => ({
+  publicSpringReadRepositoryMock: {
+    getCatalog: vi.fn(),
+    getDetailById: vi.fn(),
+  },
+}));
+
 vi.mock('react-native', async () => import('../mocks/react-native'));
 vi.mock('expo-router', async () => import('../mocks/expo-router'));
 vi.mock(
   '../../apps/mobile/src/infrastructure/supabase/repositories/public-spring-read-repository',
-  async () => {
-    const fixtures = await import('../fixtures/public-spring-data');
-
-    return {
-      publicSpringReadRepository: {
-        getCatalog: vi.fn(async () => fixtures.publicSpringCatalogFixture),
-        getDetailById: vi.fn(async (springId: string) =>
-          fixtures.getPublicSpringDetailFixtureById(springId),
-        ),
-      },
-    };
-  },
+  async () => ({
+    publicSpringReadRepository: publicSpringReadRepositoryMock,
+  }),
 );
 
 afterEach(async () => {
@@ -34,6 +32,19 @@ afterEach(async () => {
 });
 
 describe('Phase 6 map browse flow', () => {
+  beforeEach(async () => {
+    const fixtures = await import('../fixtures/public-spring-data');
+
+    publicSpringReadRepositoryMock.getCatalog.mockReset();
+    publicSpringReadRepositoryMock.getDetailById.mockReset();
+    publicSpringReadRepositoryMock.getCatalog.mockResolvedValue(
+      fixtures.publicSpringCatalogFixture,
+    );
+    publicSpringReadRepositoryMock.getDetailById.mockImplementation(async (springId: string) =>
+      fixtures.getPublicSpringDetailFixtureById(springId),
+    );
+  });
+
   it('renders the map browse shell as the default route instead of the Phase 2 showcase', async () => {
     const { screen } = await import('@testing-library/react-native');
 
@@ -88,5 +99,26 @@ describe('Phase 6 map browse flow', () => {
 
     expect(routeSource).not.toContain('@maplibre/maplibre-react-native');
     expect(screenSource).not.toContain('@maplibre/maplibre-react-native');
+  });
+
+  it('shows offline cached catalog copy when hydrated public data exists and the network fetch fails', async () => {
+    const { screen, waitFor } = await import('@testing-library/react-native');
+
+    publicSpringReadRepositoryMock.getCatalog.mockRejectedValueOnce(new Error('network down'));
+
+    await renderWithTheme(<IndexRoute />, {
+      offlineQueueSnapshot: {
+        isOnline: false,
+      },
+      seedQueryData: [
+        {
+          data: publicSpringCatalogFixture,
+          queryKey: ['public-spring-catalog'],
+        },
+      ],
+    });
+
+    await waitFor(() => expect(screen.getByTestId('map-browse-screen')).toBeDefined());
+    expect(screen.getByText(/מהמטמון הציבורי המקומי/)).toBeDefined();
   });
 });

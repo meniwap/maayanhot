@@ -8,6 +8,7 @@ import { AppText, Button, Card, Screen, Stack } from '@maayanhot/ui';
 import React from 'react';
 
 import { useDevSession } from '../dev-session/DevSessionProvider';
+import { useOfflineReportQueue } from '../../infrastructure/offline/OfflineReportQueueProvider';
 import { publicSpringReadRepository } from '../../infrastructure/supabase/repositories/public-spring-read-repository';
 import { toSpringDetailVM } from './spring-detail-vm';
 import { SpringDetailView } from './SpringDetailView';
@@ -28,6 +29,7 @@ export function SpringDetailScreen({
   springId,
 }: SpringDetailScreenProps) {
   const { snapshot } = useDevSession();
+  const offlineQueue = useOfflineReportQueue();
   const detailQuery = useQuery({
     enabled: Boolean(snapshot.isConfigured && springId),
     queryFn: () => publicSpringReadRepository.getDetailById(springId!),
@@ -60,7 +62,7 @@ export function SpringDetailScreen({
     );
   }
 
-  if (detailQuery.isError) {
+  if (detailQuery.isError && !detailQuery.data) {
     return (
       <Screen testID="spring-detail-error">
         <Card variant="raised">
@@ -96,6 +98,12 @@ export function SpringDetailScreen({
   }
 
   const detail = toSpringDetailVM(spring);
+  const localQueuedReports = offlineQueue.snapshot.items.filter(
+    (item) => item.springId === detail.id && item.ownerUserId === snapshot.userId,
+  );
+  const localRecentDeliveries = offlineQueue.snapshot.recentDeliveries.filter(
+    (item) => item.springId === detail.id && item.ownerUserId === snapshot.userId,
+  );
 
   const handleNavigate = async (app: (typeof navigationAppOptions)[number]['app']) => {
     await navigationAdapter.open({
@@ -114,10 +122,19 @@ export function SpringDetailScreen({
     <SpringDetailView
       canSubmitReport={snapshot.status === 'authenticated'}
       feedbackMessage={feedbackMessage}
+      isRenderingCachedData={detailQuery.isError && Boolean(detailQuery.data)}
+      localQueuedReports={localQueuedReports}
+      localRecentDeliveries={localRecentDeliveries}
       navigationOptions={navigationAppOptions}
       onBack={onBack}
+      onDiscardQueuedReport={(queueId) => {
+        void offlineQueue.discardQueuedReport(queueId);
+      }}
       onNavigate={handleNavigate}
       spring={detail}
+      onRetryQueuedReport={(queueId) => {
+        void offlineQueue.retryQueuedReport(queueId);
+      }}
       {...(onOpenReport ? { onOpenReport: () => onOpenReport(detail.id) } : {})}
     />
   );

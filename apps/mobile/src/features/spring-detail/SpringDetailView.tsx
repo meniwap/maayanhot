@@ -4,15 +4,24 @@ import React from 'react';
 import { Image, ScrollView, StyleSheet } from 'react-native';
 
 import type { SpringDetailVM } from './spring-detail-vm';
+import type {
+  OfflineReportDeliveryReceipt,
+  QueuedReportSubmission,
+} from '../../infrastructure/offline/offline-report-queue';
 import { formatObservationDate, toStatusBadgeStatus } from '../public-read/public-status';
 
 type SpringDetailViewProps = {
   canSubmitReport?: boolean;
   feedbackMessage?: string | null;
+  isRenderingCachedData?: boolean;
+  localQueuedReports?: QueuedReportSubmission[];
+  localRecentDeliveries?: OfflineReportDeliveryReceipt[];
   navigationOptions: NavigationAppOption[];
   onBack: () => void;
+  onDiscardQueuedReport?: (queueId: string) => void;
   onNavigate: (app: NavigationAppOption['app']) => void;
   onOpenReport?: () => void;
+  onRetryQueuedReport?: (queueId: string) => void;
   spring: SpringDetailVM;
 };
 
@@ -31,10 +40,15 @@ const styles = StyleSheet.create({
 export function SpringDetailView({
   canSubmitReport = false,
   feedbackMessage = null,
+  isRenderingCachedData = false,
+  localQueuedReports = [],
+  localRecentDeliveries = [],
   navigationOptions,
   onBack,
+  onDiscardQueuedReport,
   onNavigate,
   onOpenReport,
+  onRetryQueuedReport,
   spring,
 }: SpringDetailViewProps) {
   return (
@@ -46,6 +60,90 @@ export function SpringDetailView({
       {feedbackMessage ? (
         <Card testID="spring-detail-feedback" variant="raised">
           <AppText variant="bodyMd">{feedbackMessage}</AppText>
+        </Card>
+      ) : null}
+
+      {isRenderingCachedData ? (
+        <Card testID="spring-detail-offline-cache" variant="raised">
+          <AppText tone="secondary" variant="bodySm">
+            מוצגים כרגע נתונים ציבוריים ששוחזרו מהמטמון המקומי. סטטוס ציבורי נשאר תלוי רק בנתונים
+            המאושרים שבשרת.
+          </AppText>
+        </Card>
+      ) : null}
+
+      {localRecentDeliveries.length > 0 || localQueuedReports.length > 0 ? (
+        <Card testID="spring-detail-local-delivery">
+          <Stack gap="3">
+            <AppText variant="titleMd">מצב דיווחים מקומיים במכשיר</AppText>
+
+            {localRecentDeliveries.map((delivery) => (
+              <Card
+                key={`delivery-${delivery.queueId}`}
+                padding="3"
+                testID={`spring-local-delivery-${delivery.queueId}`}
+              >
+                <Stack gap="1">
+                  <AppText variant="labelMd">נשלח וממתין למודרציה</AppText>
+                  <AppText tone="secondary" variant="bodySm">
+                    הדיווח נשלח לשרת ונשמר בהמתנה לאישור. הוא עדיין לא חלק מהתצוגה הציבורית.
+                  </AppText>
+                </Stack>
+              </Card>
+            ))}
+
+            {localQueuedReports.map((item) => (
+              <Card key={item.queueId} padding="3" testID={`spring-local-queue-${item.queueId}`}>
+                <Stack gap="2">
+                  <AppText variant="labelMd">
+                    {item.status === 'queued'
+                      ? 'דיווח שמור מקומית'
+                      : item.status === 'retry_scheduled'
+                        ? 'הדיווח מחכה לניסיון חוזר'
+                        : item.status === 'syncing'
+                          ? 'הדיווח נשלח כעת'
+                          : item.status === 'blocked_auth'
+                            ? 'הדיווח מחכה להתחברות של אותו משתמש'
+                            : 'הדיווח נעצר ודורש טיפול'}
+                  </AppText>
+                  <AppText tone="secondary" variant="bodySm">
+                    {item.status === 'failed_permanent'
+                      ? 'הדיווח לא נשלח בגלל שגיאה שאינה ניתנת ל-retry אוטומטי.'
+                      : item.status === 'retry_scheduled'
+                        ? `הניסיון הבא יקרה לאחר ${item.nextAttemptAt?.slice(11, 16) ?? 'התאוששות חיבור'}.`
+                        : item.status === 'blocked_auth'
+                          ? 'יש להתחבר מחדש עם אותו משתמש כדי להשלים את השליחה.'
+                          : 'הדיווח נשמר רק מקומית עד לסיום מסלול השליחה והאישור.'}
+                  </AppText>
+                  {item.lastErrorCode ? (
+                    <AppText tone="secondary" variant="bodySm">
+                      קוד שגיאה אחרון: {item.lastErrorCode}
+                    </AppText>
+                  ) : null}
+                  {item.status !== 'syncing' ? (
+                    <Inline gap="2">
+                      {onRetryQueuedReport ? (
+                        <Button
+                          label="נסה שוב"
+                          onPress={() => onRetryQueuedReport(item.queueId)}
+                          testID={`spring-local-queue-retry-${item.queueId}`}
+                          variant="secondary"
+                        />
+                      ) : null}
+                      {onDiscardQueuedReport ? (
+                        <Button
+                          label="מחק טיוטה מקומית"
+                          onPress={() => onDiscardQueuedReport(item.queueId)}
+                          testID={`spring-local-queue-discard-${item.queueId}`}
+                          variant="ghost"
+                        />
+                      ) : null}
+                    </Inline>
+                  ) : null}
+                </Stack>
+              </Card>
+            ))}
+          </Stack>
         </Card>
       ) : null}
 

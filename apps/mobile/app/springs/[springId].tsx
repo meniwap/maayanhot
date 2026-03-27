@@ -26,7 +26,9 @@ export default function SpringDetailRoute() {
       feedbackMessage={
         feedback === 'report-pending'
           ? 'הדיווח התקבל ונשמר בהמתנה לאישור. רק לאחר אישור הוא יוכל להשפיע על הסטטוס הציבורי.'
-          : null
+          : feedback === 'report-queued-offline'
+            ? 'הדיווח נשמר מקומית ויישלח אוטומטית כשהמכשיר יחזור לאונליין תחת אותו משתמש.'
+            : null
       }
       onBack={() => router.back()}
       onOpenReport={(springId) =>

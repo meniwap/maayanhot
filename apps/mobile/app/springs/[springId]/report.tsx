@@ -19,10 +19,10 @@ export default function ReportComposeRoute() {
   return (
     <ReportComposeScreen
       onBack={() => router.back()}
-      onReportSubmitted={(submittedSpringId) =>
+      onReportSubmitted={({ feedback, springId: submittedSpringId }) =>
         router.replace({
           params: {
-            feedback: 'report-pending',
+            feedback,
             springId: submittedSpringId,
           },
           pathname: '/springs/[springId]',

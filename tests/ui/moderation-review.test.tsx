@@ -2,25 +2,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithTheme } from './render-with-theme';
 
-const moderationQueueRepositoryMock = {
-  applyDecision: vi.fn(),
-  getReviewByReportId: vi.fn(),
-  listPending: vi.fn(),
-};
-
-const springReportRepositoryMock = {
-  create: vi.fn(),
-  finalizeMediaUpload: vi.fn(),
-  getById: vi.fn(),
-  listBySpringId: vi.fn(),
-  listMediaByReportIds: vi.fn(),
-  reserveMediaSlot: vi.fn(),
-};
-
-const springStatusProjectionRepositoryMock = {
-  getBySpringId: vi.fn(),
-  upsert: vi.fn(),
-};
+const {
+  moderationQueueRepositoryMock,
+  springReportRepositoryMock,
+  springStatusProjectionRepositoryMock,
+} = vi.hoisted(() => ({
+  moderationQueueRepositoryMock: {
+    applyDecision: vi.fn(),
+    getReviewByReportId: vi.fn(),
+    listPending: vi.fn(),
+  },
+  springReportRepositoryMock: {
+    create: vi.fn(),
+    finalizeMediaUpload: vi.fn(),
+    getById: vi.fn(),
+    listBySpringId: vi.fn(),
+    listMediaByReportIds: vi.fn(),
+    reserveMediaSlot: vi.fn(),
+  },
+  springStatusProjectionRepositoryMock: {
+    getBySpringId: vi.fn(),
+    upsert: vi.fn(),
+  },
+}));
 
 vi.mock('react-native', async () => import('../mocks/react-native'));
 vi.mock(

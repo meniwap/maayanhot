@@ -1,13 +1,19 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import type { PropsWithChildren } from 'react';
 
 import { DevSessionProvider } from '../../features/dev-session/DevSessionProvider';
-import { getQueryClient } from '../query/query-client';
+import { OfflineReportQueueProvider } from '../offline/OfflineReportQueueProvider';
+import { getQueryClient, getQueryPersistenceOptions } from '../query/query-client';
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
-    <QueryClientProvider client={getQueryClient()}>
-      <DevSessionProvider>{children}</DevSessionProvider>
-    </QueryClientProvider>
+    <PersistQueryClientProvider
+      client={getQueryClient()}
+      persistOptions={getQueryPersistenceOptions()}
+    >
+      <DevSessionProvider>
+        <OfflineReportQueueProvider>{children}</OfflineReportQueueProvider>
+      </DevSessionProvider>
+    </PersistQueryClientProvider>
   );
 }

@@ -78,6 +78,15 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
   - approve/reject controls
   - trust-management UI
   - raw storage/provider internals
+- Phase 11 offline-lite adds:
+  - cached rendering for previously loaded public browse/detail data
+  - inline local delivery state for queued report submissions
+  - offline save semantics for the report-compose route
+- Phase 11 offline-lite must not add:
+  - offline tiles
+  - queued admin spring creation
+  - background sync UX
+  - public exposure of queued, pending, or rejected content
 
 ## Container / Presenter Boundary
 
@@ -202,6 +211,38 @@ type ReportDraftVM = {
   }>;
 };
 ```
+
+Phase 11 delivery note:
+
+- the compose flow still renders `ReportDraftVM`, but delivery state is now queue-aware
+- offline submit becomes a local queue save rather than a hard error
+- attachment removal and retry/discard actions remain local-delivery concerns, not public history data
+
+## Phase 11 Offline-Lite Screen Rules
+
+Map Browse:
+
+- may render previously loaded public catalog data while offline
+- must clearly signal that the data is cached/stale
+- must not imply offline map-tile support
+
+Spring Detail:
+
+- may render previously loaded public detail data while offline
+- may render an inline local-only queue/delivery card for the current user and spring
+- must keep queued local note text and local delivery state out of the approved public history summary
+
+Report Compose:
+
+- may save a validated report draft locally when offline
+- must use the shared queue-aware flow service rather than screen-local retry logic
+- must treat attachments as copied local files owned by the queue until replay succeeds or the draft is discarded
+
+Admin Spring Editor:
+
+- remains online-only in Phase 11
+- must show an explicit connection-required state when offline
+- must not enqueue admin writes locally
 
 ### `ModerationQueueItemVM`
 

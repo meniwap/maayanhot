@@ -34,6 +34,28 @@ beforeEach(() => {
 });
 
 describe('phase 8 create spring flow', () => {
+  it('keeps admin spring creation online-only when the app is offline', async () => {
+    const { screen } = await import('@testing-library/react-native');
+    const { default: AdminCreateRoute } = await import('../../apps/mobile/app/admin/springs/new');
+
+    await renderWithTheme(<AdminCreateRoute />, {
+      offlineQueueSnapshot: {
+        isOnline: false,
+      },
+      sessionSnapshot: {
+        email: 'admin@example.com',
+        primaryRole: 'admin',
+        roleSet: ['admin'],
+        status: 'authenticated',
+        userId: 'admin-1',
+      },
+    });
+
+    expect(screen.getByTestId('admin-create-offline-message')).toBeDefined();
+    expect(screen.getByTestId('admin-create-submit').props.disabled).toBe(true);
+    expect(springRepositoryMock.create).not.toHaveBeenCalled();
+  });
+
   it('creates a draft spring and stays in the create flow with a success confirmation', async () => {
     const { fireEvent, screen, waitFor } = await import('@testing-library/react-native');
     const { default: AdminCreateRoute } = await import('../../apps/mobile/app/admin/springs/new');

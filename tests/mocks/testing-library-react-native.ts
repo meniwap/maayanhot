@@ -8,9 +8,9 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 type Queries = {
   getAllByTestId: (testID: string) => ReactTestInstance[];
   getByTestId: (testID: string) => ReactTestInstance;
-  getByText: (text: string) => ReactTestInstance;
+  getByText: (text: RegExp | string) => ReactTestInstance;
   queryByTestId: (testID: string) => ReactTestInstance | null;
-  queryByText: (text: string) => ReactTestInstance | null;
+  queryByText: (text: RegExp | string) => ReactTestInstance | null;
 };
 
 let currentRenderer: ReactTestRenderer | null = null;
@@ -60,6 +60,9 @@ const getTextContent = (node: ReactTestInstance): string =>
     })
     .join('');
 
+const matchesText = (content: string, matcher: RegExp | string) =>
+  typeof matcher === 'string' ? content === matcher : matcher.test(content);
+
 const createQueries = (): Queries => ({
   getAllByTestId: (testID: string) => {
     const matches: ReactTestInstance[] = [];
@@ -96,10 +99,10 @@ const createQueries = (): Queries => ({
 
     return match;
   },
-  getByText: (text: string) => {
+  getByText: (text: RegExp | string) => {
     const match = walkTree(
       getRoot(),
-      (candidate) => candidate.type === 'Text' && getTextContent(candidate) === text,
+      (candidate) => candidate.type === 'Text' && matchesText(getTextContent(candidate), text),
     );
 
     if (!match) {
@@ -113,10 +116,10 @@ const createQueries = (): Queries => ({
       getRoot(),
       (candidate) => typeof candidate.type === 'string' && candidate.props?.testID === testID,
     ),
-  queryByText: (text: string) =>
+  queryByText: (text: RegExp | string) =>
     walkTree(
       getRoot(),
-      (candidate) => candidate.type === 'Text' && getTextContent(candidate) === text,
+      (candidate) => candidate.type === 'Text' && matchesText(getTextContent(candidate), text),
     ),
 });
 
@@ -185,7 +188,7 @@ export const screen = {
 
     return currentQueries.getByTestId(testID);
   },
-  getByText(text: string) {
+  getByText(text: RegExp | string) {
     if (!currentQueries) {
       throw new Error('screen.getByText was called before render.');
     }
@@ -199,7 +202,7 @@ export const screen = {
 
     return currentQueries.queryByTestId(testID);
   },
-  queryByText(text: string) {
+  queryByText(text: RegExp | string) {
     if (!currentQueries) {
       throw new Error('screen.queryByText was called before render.');
     }
@@ -216,11 +219,23 @@ export const fireEvent = {
       onChangeText?.(value);
     });
   },
-  press(node: ReactTestInstance, payload?: unknown) {
-    act(() => {
-      const onPress = node.props.onPress as ((event?: unknown) => void) | undefined;
+  async press(node: ReactTestInstance, payload?: unknown) {
+    const onPress = node.props.onPress as ((event?: unknown) => unknown) | undefined;
 
-      onPress?.(payload);
+    if (!onPress) {
+      return;
+    }
+
+    let result: unknown;
+
+    act(() => {
+      result = onPress(payload);
     });
+
+    if (result && typeof (result as Promise<unknown>).then === 'function') {
+      await act(async () => {
+        await result;
+      });
+    }
   },
 };

@@ -20,6 +20,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { useDevSession } from '../dev-session/DevSessionProvider';
+import { useOfflineReportQueue } from '../../infrastructure/offline/OfflineReportQueueProvider';
 import { initialIsraelViewport } from '../map-browse/public-spring-catalog';
 import { CreateSpringFlow } from '../../infrastructure/services/create-spring-flow';
 import { springRepository } from '../../infrastructure/supabase/repositories/spring-repository';
@@ -41,6 +42,7 @@ export function AdminSpringCreateScreen({
   const tokens = useTokens();
   const queryClient = useQueryClient();
   const { snapshot } = useDevSession();
+  const offlineQueue = useOfflineReportQueue();
   const CoordinatePickerSurface = mapLibreAdapter.CoordinatePickerSurface;
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -227,6 +229,11 @@ export function AdminSpringCreateScreen({
             Phase 8 שומר על יצירת מעיין כפעולת מנהל בלבד. ברירת המחדל היא טיוטה, ורק פרסום מפורש
             מוסיף את המעיין למשטחי הקריאה הציבוריים.
           </AppText>
+          {!offlineQueue.snapshot.isOnline ? (
+            <AppText testID="admin-create-offline-message" tone="secondary" variant="bodySm">
+              יצירת מעיין חדש נשארת אונליין-בלבד. אין תור אופליין לפעולת ניהול זו.
+            </AppText>
+          ) : null}
         </Stack>
       </Card>
 
@@ -367,7 +374,7 @@ export function AdminSpringCreateScreen({
             </Card>
           ) : null}
           <Button
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || !offlineQueue.snapshot.isOnline}
             label={publicationState === 'published' ? 'צור ופרסם' : 'צור טיוטה'}
             onPress={() => void handleSubmit()}
             stretch

@@ -92,6 +92,7 @@ export interface SpringReportRepository {
   listMediaByReportIds(reportIds: ReportId[]): Promise<Record<ReportId, SpringMedia[]>>;
   reserveMediaSlot(input: {
     reportId: ReportId;
+    clientMediaDraftId: string;
     fileExtension: string | null;
     capturedAt: IsoTimestampString | null;
   }): Promise<MediaSlotReservation>;

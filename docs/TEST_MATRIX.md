@@ -9,7 +9,7 @@
 
 ## Current Status
 
-Phase 10 adds trusted-contributor progression coverage, refined derived-status coverage, and explicit projection-cache update coverage on top of the earlier moderation and tooling baselines.
+Phase 11 adds bounded offline-lite coverage for persisted public reads, queued report replay, reconnect/backoff behavior, and idempotent DB guardrails on top of the earlier moderation and tooling baselines.
 
 ## Inventory By Category
 
@@ -70,10 +70,11 @@ Phase 10 adds trusted-contributor progression coverage, refined derived-status c
 | Trust And Status | Trust escalation rules tests                                                           | 10                | Complete |
 | Trust And Status | Stale/recent/unknown status derivation tests                                           | 10                | Complete |
 | Trust And Status | Cached projection update tests                                                         | 10                | Complete |
-| Offline          | Queue enqueue/dequeue tests                                                            | 11                | Planned  |
-| Offline          | Retry and backoff rules tests                                                          | 11                | Planned  |
-| Offline          | Reconnect merge tests                                                                  | 11                | Planned  |
-| Offline          | Previously loaded data offline-read test                                               | 11                | Planned  |
+| Offline          | Queue enqueue/dequeue tests                                                            | 11                | Complete |
+| Offline          | Retry and backoff rules tests                                                          | 11                | Complete |
+| Offline          | Reconnect merge tests                                                                  | 11                | Complete |
+| Offline          | Previously loaded data offline-read test                                               | 11                | Complete |
+| Offline          | Admin create remains online-only while offline                                         | 11                | Complete |
 | Discovery        | Search/filter integration tests                                                        | 12                | Planned  |
 | Discovery        | List/map coordination tests                                                            | 12                | Planned  |
 | Admin Web        | Admin moderation workflow E2E                                                          | 13                | Planned  |
@@ -111,7 +112,7 @@ Exact tool versions will be pinned when those tools are introduced in code and a
 | 8     | Create/report/upload integration and permission tests                                            |
 | 9     | Moderation integration, state-transition, SQL/policy guardrails, and committed E2E flow artifact |
 | 10    | Status derivation, trust escalation, and projection tests                                        |
-| 11    | Offline queue, reconnect, and offline-lite E2E tests                                             |
+| 11    | Offline queue, reconnect/backoff, offline-read, and replay-safety tests                          |
 | 12    | Discovery/search/filter behavior tests                                                           |
 | 13    | Admin integration and E2E tests                                                                  |
 | 14    | Resilience, abuse, and performance smoke checks                                                  |

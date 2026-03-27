@@ -35,6 +35,13 @@ const phase10PgTapPath = join(
   'database',
   'phase10_trust_and_projection.test.sql',
 );
+const phase11PgTapPath = join(
+  projectRoot,
+  'supabase',
+  'tests',
+  'database',
+  'phase11_offline_queue.test.sql',
+);
 
 describe('phase 4 and phase 5 Supabase project structure', () => {
   it('pins the local Supabase project structure to the exact maayanhot project name', () => {
@@ -57,10 +64,12 @@ describe('phase 4 and phase 5 Supabase project structure', () => {
     expect(migrationFiles).toContain('20260326210000_phase8_public_detail_and_upload.sql');
     expect(migrationFiles).toContain('20260326223000_phase9_moderation.sql');
     expect(migrationFiles).toContain('20260327090000_phase10_trust_and_projection.sql');
+    expect(migrationFiles).toContain('20260327120000_phase11_offline_queue.sql');
     expect(existsSync(pgTapPath)).toBe(true);
     expect(existsSync(phase5PgTapPath)).toBe(true);
     expect(existsSync(phase8PgTapPath)).toBe(true);
     expect(existsSync(phase9PgTapPath)).toBe(true);
     expect(existsSync(phase10PgTapPath)).toBe(true);
+    expect(existsSync(phase11PgTapPath)).toBe(true);
   });
 });

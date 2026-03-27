@@ -299,6 +299,24 @@ This file records architecture and delivery decisions that materially affect fut
 - Alternatives considered: trust client ordering only; move all projection writes into ad hoc UI logic; allow last-write-wins regardless of timestamp.
 - Consequences: The projection path stays cache-only but becomes safer under concurrency, and both the domain/application path and the SQL write surface now share the same anti-stale intent.
 
+## ADR-0034: Offline-Lite Persists Public Reads And Queues Report Submission Only
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Phase 11 persists only previously loaded public-safe spring catalog/detail queries and a local queue of user report submissions, while keeping admin spring creation online-only and replay foreground-only.
+- Why: The app needs bounded offline usefulness without inventing a generalized sync engine, weakening moderation/security guarantees, or exposing unapproved content through local state.
+- Alternatives considered: no offline support at all; queue every write surface including admin creates; attempt full background sync and offline maps in the first pass.
+- Consequences: Offline behavior stays explicit and testable, public-safe reads survive relaunch, queued writes remain scoped to the same authenticated user, and moderation/public truth still depends solely on remote approved history.
+
+## ADR-0035: Report Replay Safety Uses Server-Side Idempotency Keys
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Phase 11 adds `client_submission_id` on `spring_reports`, `client_media_draft_id` on `report_media`, and idempotent RPCs `public.submit_spring_report(...)` and `public.reserve_report_media_slot(...)` to make reconnect/replay safe.
+- Why: Offline and reconnect flows must tolerate duplicate submits, partial progress, and attachment-slot replays without creating duplicate reports or media rows.
+- Alternatives considered: local-only dedupe; client-side retry with last-known ids but no DB constraints; a larger generalized sync engine.
+- Consequences: The replay path can safely retry the same logical report, repository/application layers stay in charge of delivery state, and canonical report/media history remains server-owned and constraint-backed.
+
 ## Version Decision Summary
 
 - Node runtime baseline: 24.14.1.
@@ -326,6 +344,8 @@ This file records architecture and delivery decisions that materially affect fut
 - Phase 9 moderation baseline: moderators/admins now review pending reports through staff-only Supabase views, submit approve/reject decisions through an RPC-only write surface, and refresh the public projection cache through the shared domain derivation path.
 - Phase 9 media-preview baseline: private moderation previews are generated through a signed-URL helper inside `packages/upload-core`, not through direct screen-level storage calls.
 - Phase 8 upload baseline: uploads are sequential, slot-based, and routed through `packages/upload-core` with a Supabase storage adapter.
+- Phase 11 offline-lite baseline: only previously loaded public-safe catalog/detail queries are persisted, and only user report submissions are queued locally.
+- Phase 11 replay baseline: reconnect replay is foreground-only, same-user scoped, and protected by server-side idempotency keys on reports and reserved media slots.
 - Backend baseline: Supabase platform with CLI 2.84.2, PostgreSQL 17 compatibility, and PostGIS 3.6 compatibility.
 - Server-state baseline: TanStack Query 5.95.2.
 - Future admin-web baseline: Next.js 16.2.1, planned but not yet implemented.

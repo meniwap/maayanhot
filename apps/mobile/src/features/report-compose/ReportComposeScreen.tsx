@@ -15,37 +15,31 @@ import React, { useMemo, useState } from 'react';
 
 import { useDevSession } from '../dev-session/DevSessionProvider';
 import { publicSpringReadRepository } from '../../infrastructure/supabase/repositories/public-spring-read-repository';
-import { springReportRepository } from '../../infrastructure/supabase/repositories/spring-report-repository';
 import {
   SubmitReportFlow,
   type ReportAttachmentDraft,
 } from '../../infrastructure/services/submit-report-flow';
-import { createSupabaseUploadAdapter, type PendingUpload } from '@maayanhot/upload-core';
-import { getSupabaseClient } from '../../infrastructure/supabase/client';
+import { useOfflineReportQueue } from '../../infrastructure/offline/OfflineReportQueueProvider';
 
 type ReportComposeScreenProps = {
   onBack: () => void;
-  onReportSubmitted: (springId: string) => void;
+  onReportSubmitted: (result: {
+    feedback: 'report-pending' | 'report-queued-offline';
+    springId: string;
+  }) => void;
   springId: string | null;
 };
 
-type AttachmentViewState = ReportAttachmentDraft & {
-  errorCode: string | null;
-  pendingUpload: PendingUpload | null;
-  status: 'failed' | 'ready' | 'uploading';
-};
+type AttachmentViewState = ReportAttachmentDraft;
 
 const readPickerAsset = (asset: ImagePicker.ImagePickerAsset): AttachmentViewState => ({
   byteSize: asset.fileSize ?? null,
   capturedAt: asset.exif?.DateTimeOriginal ?? null,
-  errorCode: null,
   height: asset.height ?? null,
   kind: 'image',
   localId: asset.assetId ?? `${asset.uri}-${Date.now()}`,
   localUri: asset.uri,
   mimeType: asset.mimeType ?? null,
-  pendingUpload: null,
-  status: 'ready',
   width: asset.width ?? null,
 });
 
@@ -61,41 +55,28 @@ export function ReportComposeScreen({
   springId,
 }: ReportComposeScreenProps) {
   const { snapshot } = useDevSession();
-  const submitReportFlow = useMemo(
-    () =>
-      snapshot.isConfigured
-        ? new SubmitReportFlow(
-            springReportRepository,
-            createSupabaseUploadAdapter(getSupabaseClient()),
-          )
-        : null,
-    [snapshot.isConfigured],
-  );
+  const offlineQueue = useOfflineReportQueue();
+  const submitReportFlow = useMemo(() => new SubmitReportFlow(offlineQueue), [offlineQueue]);
   const [observedAt, setObservedAt] = useState(new Date().toISOString());
   const [waterPresence, setWaterPresence] = useState<'water' | 'no_water' | 'unknown'>('unknown');
   const [note, setNote] = useState('');
   const [attachments, setAttachments] = useState<AttachmentViewState[]>([]);
   const [permissionMessage, setPermissionMessage] = useState<string | null>(null);
-  const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
-  const [createdReportId, setCreatedReportId] = useState<string | null>(null);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [isPreparingAttachment, setIsPreparingAttachment] = useState(false);
   const detailQuery = useQuery({
     enabled: Boolean(snapshot.isConfigured && springId),
     queryFn: () => publicSpringReadRepository.getDetailById(springId!),
     queryKey: ['public-spring-detail', springId],
   });
 
-  const failedAttachments = useMemo(
-    () => attachments.filter((attachment) => attachment.status === 'failed'),
-    [attachments],
+  const queuedReportsForSpring = offlineQueue.snapshot.items.filter(
+    (item) => item.springId === springId && item.ownerUserId === snapshot.userId,
   );
 
   const submitMutation = useMutation({
     mutationFn: () => {
-      if (!submitReportFlow) {
-        throw new Error('Supabase upload flow is not configured.');
-      }
-
       return submitReportFlow.submit({
         attachments,
         note,
@@ -105,51 +86,10 @@ export function ReportComposeScreen({
       });
     },
     onSuccess: (result) => {
-      setCreatedReportId(result.reportId);
-
-      if (result.failedUploads.length === 0) {
-        onReportSubmitted(springId!);
-        return;
-      }
-
-      setSubmitMessage('הדיווח נשמר, אבל חלק מהתמונות נכשלו בהעלאה. אפשר לנסות שוב מהכרטיסים.');
-      setAttachments((current) =>
-        current.map((attachment) => {
-          const failedUpload = result.failedUploads.find(
-            (candidate) => candidate.queueId === attachment.localId,
-          );
-
-          if (!failedUpload) {
-            return attachment;
-          }
-
-          return {
-            ...attachment,
-            errorCode: failedUpload.lastErrorCode,
-            pendingUpload: failedUpload,
-            status: 'failed',
-          };
-        }),
-      );
-    },
-  });
-
-  const retryMutation = useMutation({
-    mutationFn: async (localId: string) => {
-      const attachment = attachments.find((candidate) => candidate.localId === localId);
-
-      if (!attachment || !createdReportId) {
-        throw new Error('Missing failed upload state.');
-      }
-
-      if (!submitReportFlow || !attachment.pendingUpload) {
-        throw new Error('Missing retry metadata for the failed upload.');
-      }
-
-      return submitReportFlow.retryUpload(attachment.pendingUpload);
-    },
-    onError: (error) => {
-      setSubmitMessage(error instanceof Error ? error.message : 'הניסיון החוזר נכשל.');
+      onReportSubmitted({
+        feedback: result.feedback,
+        springId: springId!,
+      });
     },
   });
 
@@ -184,7 +124,28 @@ export function ReportComposeScreen({
       return;
     }
 
-    setAttachments((current) => [...current, ...pickerResult.assets.map(readPickerAsset)]);
+    setIsPreparingAttachment(true);
+
+    try {
+      const preparedAttachments = await Promise.all(
+        pickerResult.assets.map((asset) =>
+          submitReportFlow.prepareAttachment(readPickerAsset(asset)),
+        ),
+      );
+
+      setAttachments((current) => [...current, ...preparedAttachments]);
+    } catch (error) {
+      setPermissionMessage(error instanceof Error ? error.message : 'שמירת התמונה המקומית נכשלה.');
+    } finally {
+      setIsPreparingAttachment(false);
+    }
+  };
+
+  const handleRemoveAttachment = async (attachment: AttachmentViewState) => {
+    await submitReportFlow.discardPreparedAttachment(attachment);
+    setAttachments((current) =>
+      current.filter((candidate) => candidate.localId !== attachment.localId),
+    );
   };
 
   const handleSubmit = async () => {
@@ -208,49 +169,6 @@ export function ReportComposeScreen({
     }
   };
 
-  const handleRetry = async (localId: string) => {
-    const attachment = attachments.find((candidate) => candidate.localId === localId);
-
-    if (!attachment) {
-      return;
-    }
-
-    setAttachments((current) =>
-      current.map((candidate) =>
-        candidate.localId === localId
-          ? { ...candidate, errorCode: null, status: 'uploading' }
-          : candidate,
-      ),
-    );
-
-    try {
-      await retryMutation.mutateAsync(localId);
-      const nextAttachments = attachments.map((candidate) =>
-        candidate.localId === localId
-          ? { ...candidate, errorCode: null, pendingUpload: null, status: 'ready' as const }
-          : candidate,
-      );
-
-      setAttachments(nextAttachments);
-
-      if (nextAttachments.every((candidate) => candidate.status !== 'failed')) {
-        onReportSubmitted(springId!);
-      }
-    } catch (error) {
-      setAttachments((current) =>
-        current.map((candidate) =>
-          candidate.localId === localId
-            ? {
-                ...candidate,
-                errorCode: error instanceof Error ? error.message : 'upload_failed',
-                status: 'failed',
-              }
-            : candidate,
-        ),
-      );
-    }
-  };
-
   if (snapshot.status !== 'authenticated') {
     return (
       <Screen testID="report-compose-auth-required">
@@ -258,7 +176,8 @@ export function ReportComposeScreen({
           <Stack gap="3">
             <AppText variant="titleLg">נדרש סשן מחובר</AppText>
             <AppText tone="secondary" variant="bodySm">
-              הדיווחים ב־Phase 8 נשלחים דרך Supabase אמיתי ולכן מחייבים התחברות דרך סשן הפיתוח.
+              הדיווחים ב־Phase 11 נשמרים ומסתנכרנים דרך Supabase אמיתי ולכן מחייבים התחברות דרך סשן
+              הפיתוח.
             </AppText>
             <Button label="חזרה" onPress={onBack} variant="ghost" />
           </Stack>
@@ -281,13 +200,24 @@ export function ReportComposeScreen({
               ? `המעיין: ${detailQuery.data.title}`
               : 'טוען את פרטי המעיין הציבוריים...'}
           </AppText>
+          <AppText testID="report-connectivity-state" tone="secondary" variant="bodySm">
+            {offlineQueue.snapshot.isOnline
+              ? 'יש חיבור. הדיווח יישלח מיד ואם ייכשל זמנית יעבור לתור retry מקומי.'
+              : 'אין חיבור. הדיווח יישמר מקומית ויסתנכרן כשאותו משתמש יחזור לאונליין.'}
+          </AppText>
+          {queuedReportsForSpring.length > 0 ? (
+            <AppText testID="report-existing-queue-state" tone="secondary" variant="bodySm">
+              יש כרגע {queuedReportsForSpring.length} דיווחים מקומיים בהמתנה לסנכרון עבור המעיין
+              הזה.
+            </AppText>
+          ) : null}
         </Stack>
       </Card>
 
       <Card>
         <Stack gap="3">
           <TextField
-            helperText="ב־Phase 8 שדה הזמן נשמר כטקסט ISO פשוט כדי לשמור על פשטות הסלייס."
+            helperText="ב־Phase 11 שדה הזמן נשמר כטקסט ISO פשוט כדי לשמור על פשטות הסלייס."
             label="זמן תצפית"
             onChangeText={setObservedAt}
             testID="report-observed-at"
@@ -317,13 +247,13 @@ export function ReportComposeScreen({
           <Inline gap="2">
             <Button
               label="מצלמה"
-              onPress={() => void attachAsset('camera')}
+              onPress={() => attachAsset('camera')}
               testID="report-attach-camera"
               variant="secondary"
             />
             <Button
               label="גלריה"
-              onPress={() => void attachAsset('library')}
+              onPress={() => attachAsset('library')}
               testID="report-attach-library"
               variant="secondary"
             />
@@ -340,22 +270,9 @@ export function ReportComposeScreen({
           ) : (
             attachments.map((attachment) => (
               <PhotoTile
-                caption={attachment.errorCode ? `קוד שגיאה: ${attachment.errorCode}` : null}
                 key={attachment.localId}
-                {...(!createdReportId
-                  ? {
-                      onRemove: () =>
-                        setAttachments((current) =>
-                          current.filter((candidate) => candidate.localId !== attachment.localId),
-                        ),
-                    }
-                  : {})}
-                {...(attachment.status === 'failed'
-                  ? {
-                      onRetry: () => void handleRetry(attachment.localId),
-                    }
-                  : {})}
-                status={attachment.status}
+                onRemove={() => handleRemoveAttachment(attachment)}
+                status="ready"
                 testID={`photo-tile-${attachment.localId}`}
                 uri={attachment.localUri}
               />
@@ -376,15 +293,10 @@ export function ReportComposeScreen({
               {submitMessage}
             </AppText>
           ) : null}
-          {failedAttachments.length > 0 ? (
-            <AppText testID="report-retry-state" tone="secondary" variant="bodySm">
-              נשארו {failedAttachments.length} קבצים לכשל חוזר. לחצו "נסה שוב" על כל כרטיס כושל.
-            </AppText>
-          ) : null}
           <Button
-            disabled={submitMutation.isPending || failedAttachments.length > 0 || !submitReportFlow}
-            label="שלח דיווח"
-            onPress={() => void handleSubmit()}
+            disabled={submitMutation.isPending || isPreparingAttachment || attachments.length > 8}
+            label={offlineQueue.snapshot.isOnline ? 'שלח דיווח' : 'שמור דיווח מקומית'}
+            onPress={handleSubmit}
             stretch
             testID="report-submit"
           />

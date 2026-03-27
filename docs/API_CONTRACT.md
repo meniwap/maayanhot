@@ -653,6 +653,67 @@ Phase 9 mobile application rule:
 - moderation queue and review screens must still go through repositories, flow services, and `packages/upload-core`
 - screens may not call moderation RPCs, storage signed-URL helpers, or projection-cache writes directly
 
+## Phase 11 Offline Replay Surfaces
+
+Idempotent report submission RPC:
+
+- `public.submit_spring_report(...)`
+  - authenticated only
+  - still enforces the existing published-spring and pending-moderation path
+  - accepts `client_submission_id`
+  - returns the already-created report when the same reporter replays the same `client_submission_id`
+
+Idempotent media-slot reservation RPC:
+
+- `public.reserve_report_media_slot(...)`
+  - authenticated only
+  - accepts `client_media_draft_id`
+  - returns the existing reserved slot when the same report replays the same `client_media_draft_id`
+
+Replay-safety columns and indexes:
+
+- `public.spring_reports.client_submission_id uuid null`
+- unique partial index on `(reporter_user_id, client_submission_id)` where `client_submission_id is not null`
+- `public.report_media.client_media_draft_id text null`
+- unique partial index on `(report_id, client_media_draft_id)` where `client_media_draft_id is not null`
+
+Phase 11 offline-lite rule:
+
+- local queue state is delivery metadata only and never becomes canonical spring state
+- approved report history plus moderation state remain the only truth for public status/history
+- queued, pending, and rejected reports remain excluded from public-safe read surfaces
+- admin spring creation is intentionally excluded from the offline queue
+
+## Phase 11 Mobile Offline Boundary
+
+Persisted public-safe reads:
+
+- `['public-spring-catalog']`
+- `['public-spring-detail', springId]`
+
+These are the only query families persisted for relaunch-safe offline reads in Phase 11.
+
+Phase 11 must not persist:
+
+- moderation queue/review data
+- private media previews
+- profile/role/auth-derived staff data
+- raw report or raw moderation rows
+- map tiles or remote image binaries
+
+Queued local write scope:
+
+- only user report submissions are queued locally
+- queue entries are scoped by `ownerUserId`
+- replay resumes only when the same user is signed in again
+- replay is foreground-only; there is no background task runner in this phase
+
+Phase 11 application boundary:
+
+- screens still go through repositories, flow services, and `packages/upload-core`
+- screens may not call `public.submit_spring_report(...)` or `public.reserve_report_media_slot(...)` directly
+- copied local attachment URIs are an app-local implementation detail and do not become shared contract fields outside the explicit idempotency keys
+
 ## Development Session Bootstrap
 
 Tracked env template:
