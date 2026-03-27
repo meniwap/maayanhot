@@ -6,6 +6,9 @@ apps/mobile/android
 .next
 coverage
 dist
+test-results
+playwright-report
+*.tsbuildinfo
 .DS_Store
 pnpm-debug.log*
 supabase/.branches

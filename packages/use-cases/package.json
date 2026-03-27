@@ -1,0 +1,17 @@
+{
+  "name": "@maayanhot/use-cases",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meniwap/maayanhot.git"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@maayanhot/contracts": "workspace:*",
+    "@maayanhot/domain": "workspace:*"
+  }
+}

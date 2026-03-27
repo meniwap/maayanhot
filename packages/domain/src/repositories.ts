@@ -10,6 +10,7 @@ import type {
   SpringId,
   UploadLifecycleState,
   SubmitSpringReportCommand,
+  UpdateSpringCommand,
   UserId,
 } from '@maayanhot/contracts';
 
@@ -81,8 +82,11 @@ export interface UserProfileRepository {
 export interface SpringRepository {
   browse(query: BrowseSpringsQuery): Promise<CursorPage<SpringBrowseItem>>;
   getDetail(query: GetSpringDetailQuery): Promise<SpringDetailAggregate | null>;
+  getManagedById(springId: SpringId): Promise<SpringBrowseItem | null>;
   create(command: CreateSpringCommand): Promise<Spring>;
-  findExistingSlugs(baseSlug: string): Promise<string[]>;
+  findExistingSlugs(baseSlug: string, excludeSpringId?: SpringId | null): Promise<string[]>;
+  listManaged(cursor?: string | null, limit?: number): Promise<CursorPage<SpringBrowseItem>>;
+  update(command: UpdateSpringCommand): Promise<Spring>;
 }
 
 export interface SpringReportRepository {

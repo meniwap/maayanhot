@@ -9,7 +9,7 @@
 
 ## Current Status
 
-Phase 12 adds bounded discovery coverage for client-side search, filters, lightweight sorting, and shared map/list coordination on top of the persisted public catalog path from Phase 11.
+Phase 13 adds bounded admin-web coverage for role-gated spring management and moderation workflows, plus Playwright browser coverage on the new Next.js admin surface.
 
 ## Inventory By Category
 
@@ -78,8 +78,12 @@ Phase 12 adds bounded discovery coverage for client-side search, filters, lightw
 | Discovery        | Search/filter integration tests                                                        | 12                | Complete |
 | Discovery        | List/map coordination tests                                                            | 12                | Complete |
 | Discovery        | Offline-compatible cached browse discovery regression                                  | 12                | Complete |
-| Admin Web        | Admin moderation workflow E2E                                                          | 13                | Planned  |
-| Admin Web        | Spring management integration tests                                                    | 13                | Planned  |
+| Admin Web        | Admin auth guard and restricted-state integration tests                                | 13                | Complete |
+| Admin Web        | Spring management integration tests                                                    | 13                | Complete |
+| Admin Web        | Moderation integration tests                                                           | 13                | Complete |
+| Admin Web        | Phase 13 admin-web SQL/policy guardrails                                               | 13                | Complete |
+| Admin Web        | Playwright admin create/edit/publish E2E                                               | 13                | Complete |
+| Admin Web        | Playwright admin moderation approval E2E                                               | 13                | Complete |
 | Hardening        | Abuse scenario tests                                                                   | 14                | Planned  |
 | Hardening        | Broken upload resilience tests                                                         | 14                | Planned  |
 | Hardening        | Large image compression/rejection tests                                                | 14                | Planned  |

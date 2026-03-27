@@ -5,6 +5,7 @@ import {
 } from '@maayanhot/map-core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { generateSpringSlugFromTitle } from '@maayanhot/domain';
+import { CreateSpringFlow } from '@maayanhot/use-cases';
 import {
   AppText,
   Button,
@@ -22,7 +23,6 @@ import { View } from 'react-native';
 import { useDevSession } from '../dev-session/DevSessionProvider';
 import { useOfflineReportQueue } from '../../infrastructure/offline/OfflineReportQueueProvider';
 import { initialIsraelViewport } from '../map-browse/public-spring-catalog';
-import { CreateSpringFlow } from '../../infrastructure/services/create-spring-flow';
 import { springRepository } from '../../infrastructure/supabase/repositories/spring-repository';
 
 type AdminSpringCreateScreenProps = {

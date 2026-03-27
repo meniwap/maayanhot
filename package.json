@@ -11,6 +11,7 @@
     "node": "24.14.1"
   },
   "scripts": {
+    "admin-web:dev": "pnpm --dir apps/admin-web dev",
     "db:local:start": "pnpm exec supabase start",
     "db:local:stop": "pnpm exec supabase stop",
     "db:local:reset": "pnpm exec supabase db reset --local",
@@ -18,19 +19,25 @@
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/mobile/tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/mobile/tsconfig.json --noEmit && tsc -p apps/admin-web/tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "validate": "pnpm lint && pnpm format && pnpm typecheck && pnpm test",
-    "mobile:start": "pnpm --filter @maayanhot/mobile start"
+    "mobile:start": "pnpm --filter @maayanhot/mobile start",
+    "test:e2e:admin-web": "playwright test tests/e2e/admin-web.spec.ts"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
     "@eslint/js": "10.0.1",
+    "@supabase/supabase-js": "2.100.1",
     "@tanstack/react-query": "5.95.2",
+    "@testing-library/react": "16.3.2",
     "@types/node": "24.12.0",
     "@testing-library/react-native": "13.3.3",
     "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.3",
     "eslint": "10.1.0",
+    "jsdom": "29.0.1",
     "prettier": "3.8.1",
     "react": "19.2.0",
     "react-native": "0.83.0",

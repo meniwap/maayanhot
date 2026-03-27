@@ -165,7 +165,23 @@ const springRepository = {
 
     return sampleSpring;
   },
-  findExistingSlugs: async () => ['ein-karem'],
+  getManagedById: async (springId: string) => {
+    void springId;
+
+    return sampleBrowsePage.items[0] ?? null;
+  },
+  listManaged: async () => sampleBrowsePage,
+  update: async (command) => {
+    void command;
+
+    return sampleSpring;
+  },
+  findExistingSlugs: async (baseSlug: string, excludeSpringId?: string | null) => {
+    void baseSlug;
+    void excludeSpringId;
+
+    return ['ein-karem'];
+  },
 } satisfies SpringRepository;
 
 const springReportRepository = {

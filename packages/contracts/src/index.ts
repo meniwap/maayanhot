@@ -203,6 +203,18 @@ export type CreateSpringCommand = {
   isPublished?: boolean;
 };
 
+export type UpdateSpringCommand = {
+  springId: SpringId;
+  slug: string;
+  title: string;
+  alternateNames: string[];
+  location: SpringLocationRecord;
+  regionCode?: string | null;
+  accessNotes?: string | null;
+  description?: string | null;
+  isPublished?: boolean;
+};
+
 export type SubmitSpringReportCommand = {
   clientSubmissionId: string;
   springId: SpringId;
@@ -262,6 +274,10 @@ export const createSpringCommandSchema = z.object({
   regionCode: z.string().trim().max(64).nullable().optional(),
   slug: springSlugSchema,
   title: z.string().trim().min(1).max(120),
+});
+
+export const updateSpringCommandSchema = createSpringCommandSchema.extend({
+  springId: z.string().trim().min(1),
 });
 
 export const submitSpringReportCommandSchema = z.object({

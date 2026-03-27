@@ -94,6 +94,54 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
   - background sync UX
   - public exposure of queued, pending, or rejected content
 
+## Admin Web Baseline
+
+Phase 13 adds a separate Next.js App Router admin surface under `apps/admin-web`.
+
+Current admin-web routes:
+
+- `/login`
+- `/admin`
+- `/admin/springs`
+- `/admin/springs/new`
+- `/admin/springs/[springId]/edit`
+- `/admin/moderation`
+- `/admin/moderation/[reportId]`
+
+Role gating rules:
+
+- unauthenticated users are redirected to `/login`
+- only `admin` may access spring-management routes
+- `moderator` and `admin` may access moderation routes
+- unauthorized users must see an explicit restricted state rather than a silent redirect loop
+
+Phase 13 admin spring-management scope:
+
+- bounded list of canonical springs for management
+- create spring
+- edit spring
+- publish / unpublish through the canonical admin RPC path
+
+Phase 13 admin spring-management must not add:
+
+- delete flow
+- bulk actions
+- contributor management
+- analytics / ops dashboards
+
+Phase 13 moderation-web scope:
+
+- queue list of pending reports only
+- single-report review page
+- private media previews for staff review
+- approve / reject actions through the shared moderation use-case path
+
+Phase 13 moderation-web must not add:
+
+- ad hoc direct moderation writes
+- raw table browsing outside the authorized workflow
+- public/mobile exposure of staff-only review data
+
 ## Container / Presenter Boundary
 
 Containers may:
@@ -118,6 +166,12 @@ Presenters may not:
 - make network requests
 - open external apps directly
 - compute business rules like trust progression or spring status derivation
+
+Phase 13 web note:
+
+- admin-web presentational components are web-local and token-driven
+- admin-web does not import the React Native `packages/ui` primitives directly
+- provider and Supabase details stay inside app-local admin-web infrastructure and feature containers
 
 ## Stable UI View Models
 

@@ -4,7 +4,7 @@ Production-oriented mobile-first product baseline for discovering, reporting on,
 
 ## Current Status
 
-Phase 9 is complete, and the pre-Phase-10 tooling-enablements are complete.
+Phase 13 is complete.
 
 - The monorepo/tooling scaffold exists.
 - The UI foundation exists as a token-driven shell and shared presentational primitives.
@@ -17,7 +17,10 @@ Phase 9 is complete, and the pre-Phase-10 tooling-enablements are complete.
 - The mobile app now has repository-backed public-safe reads, a development-only session switcher, an admin create-spring flow, a user report flow, and the first upload pipeline baseline.
 - The local Supabase DB start/reset/test path now runs on this Mac through the pinned local CLI plus Docker Desktop.
 - The local Maestro iOS smoke path now runs on this Mac against the real native bundle id `com.meniwap.maayanhot`.
-- Phase 10 is not started and requires explicit authorization.
+- The mobile app now has bounded offline-lite support for cached public reads and queued report submission replay.
+- The mobile app now has bounded client-side discovery with shared list/map coordination.
+- A real `apps/admin-web` Next.js App Router surface now exists for admin spring management and staff moderation workflows.
+- Phase 14 is not started and requires explicit authorization.
 
 ## Product Intent
 
@@ -47,7 +50,7 @@ Core goals:
 - Map layer: adapter-first, with the first MapLibre implementation now behind `packages/map-core`
 - External navigation handoff: adapter-first, behind `packages/navigation-core`
 - Upload pipeline: adapter-first, behind `packages/upload-core`
-- Future admin web: Next.js, planned but not started
+- Admin web: Next.js App Router in `apps/admin-web`
 
 ## Repository Shape
 
@@ -85,8 +88,9 @@ docs/
   VERSIONS.md
 ```
 
-Currently active workspace packages:
+Currently active workspaces:
 
+- `@maayanhot/admin-web`
 - `@maayanhot/mobile`
 - `@maayanhot/contracts`
 - `@maayanhot/design-tokens`
@@ -96,8 +100,9 @@ Currently active workspace packages:
 - `@maayanhot/shared-utils`
 - `@maayanhot/ui`
 - `@maayanhot/upload-core`
+- `@maayanhot/use-cases`
 
-These packages are still intentionally narrow by phase. `@maayanhot/map-core` now contains the first concrete provider-backed map surface, while the backend repository layer is still deferred.
+These packages are still intentionally narrow by phase. `@maayanhot/map-core` now contains the first concrete provider-backed map surface, `@maayanhot/use-cases` now holds shared create/update/moderation orchestration, and `apps/admin-web` is now a real internal surface instead of a reserved placeholder.
 
 ## Supabase Foundation
 
@@ -199,6 +204,27 @@ Passwords and keys stay in local env only and must not be committed.
 Native note:
 
 - MapLibre requires a development build/native runtime and is not an Expo Go feature
+
+## Phase 13 Admin Web
+
+Phase 13 adds:
+
+- `apps/admin-web`
+  - `/login`
+  - `/admin`
+  - `/admin/springs`
+  - `/admin/springs/new`
+  - `/admin/springs/[springId]/edit`
+  - `/admin/moderation`
+  - `/admin/moderation/[reportId]`
+
+Current rules:
+
+- spring management is admin-only
+- moderation is staff-only (`moderator` or `admin`)
+- create/update/moderation orchestration now lives in `@maayanhot/use-cases`
+- admin-web remains online-only in this phase
+- no delete flow, contributor management, analytics, or public-surface widening landed in Phase 13
 
 ## Local Tooling
 

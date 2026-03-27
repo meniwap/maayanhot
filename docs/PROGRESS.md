@@ -2,38 +2,42 @@
 
 ## Current Phase
 
-Phase 12
+Phase 13
 
 ## Done
 
-- Re-read the control docs and claimed only the Phase 12 files needed for discovery, tests, and documentation.
-- Kept Phase 12 fully client-side on top of the existing `public.public_spring_catalog` read surface and the Phase 11 persisted catalog cache.
-- Expanded the app-local public catalog mapping to include `alternateNames` from the already-approved public browse view.
-- Added feature-local discovery logic in the map-browse feature for:
-  - normalized text search
-  - bounded filters for water state and freshness
-  - justified sorting by recent public activity or title
-- Refactored the browse screen around one shared discovery state object covering:
-  - map/list view mode
-  - search text
-  - filters
-  - sort mode
-  - selected spring
-- Added explicit map/list coordination:
-  - both views derive from the same filtered/sorted result set
-  - selecting a list result switches back to map mode with the same spring selected
-  - switching views preserves the discovery context
-  - reset clears refinements without forcing a view-mode jump
-- Added phase-appropriate discovery presenters:
-  - discovery controls
-  - list results
-  - empty state
-- Upgraded the shared `Chip` primitive so it can be used as an interactive discovery control instead of a static badge only.
-- Kept offline-lite boundaries intact:
-  - no new persisted private/staff query families
-  - no offline map tiles
-  - no new offline write behavior
-  - cached catalog discovery still works when public data was previously loaded
+- Re-read the control docs and claimed only the Phase 13 files needed for admin-web, shared use-cases, migration, tests, and documentation.
+- Added the new shared `@maayanhot/use-cases` package and moved the spring-create and moderation flows behind UI-agnostic shared use-case classes.
+- Added `UpdateSpringCommand` plus the matching `SpringRepository` management methods needed for admin web create/list/edit work.
+- Added the Phase 13 forward-only migration:
+  - `public.admin_spring_management_catalog`
+  - `public.admin_spring_management_detail`
+  - `public.admin_update_spring(...)`
+- Built `apps/admin-web` as a real Next.js App Router surface with:
+  - `/login`
+  - `/admin`
+  - `/admin/springs`
+  - `/admin/springs/new`
+  - `/admin/springs/[springId]/edit`
+  - `/admin/moderation`
+  - `/admin/moderation/[reportId]`
+- Added real Supabase-backed web auth/session handling and explicit route gating:
+  - anonymous users are redirected to login
+  - moderators can access moderation but not spring management
+  - admins can access both
+  - unauthorized states render explicit restricted messaging
+- Built the admin spring-management web workflow for:
+  - bounded list view
+  - create draft flow
+  - edit existing spring flow
+  - publish-state updates through the admin RPC path
+- Built the admin moderation web workflow for:
+  - pending queue list
+  - single-report review page
+  - approve / reject actions through the shared `ModerateReportFlow`
+  - private media previews through `@maayanhot/upload-core`
+- Added admin-web integration coverage and Playwright E2E coverage for create/edit/publish and moderation approval.
+- Applied the Phase 13 migration to the linked remote Supabase project and verified the new admin surfaces through both repository tests and browser flows.
 
 ## In Progress
 
@@ -45,8 +49,13 @@ Phase 12
 
 ## Just Verified
 
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test -- --run tests/ui/map-browse-discovery.test.ts tests/ui/map-browse.test.tsx tests/integration/discovery-flow.test.tsx tests/integration/spring-read-flow.test.tsx` passed.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm format:write` succeeded after the Phase 12 implementation and docs updates.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm exec vitest run tests/web/admin-auth-guard.test.tsx tests/web/admin-spring-management.test.tsx tests/web/admin-moderation.test.tsx` passed.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:admin-web` passed.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:start` succeeded.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:reset` succeeded and applied the Phase 13 migration locally.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:test:local` passed with `Files=7` and `Tests=95`.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && npx supabase db push --linked` applied `20260327183000_phase13_admin_web.sql` to the linked remote project.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm format:write` succeeded after the Phase 13 implementation and docs updates.
 - `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm validate` passes, including lint, format, typecheck, and the full Vitest suite.
 
 ## Remaining In Current Phase
@@ -55,19 +64,26 @@ Phase 12
 
 ## Next Smallest Sensible Step
 
-- Wait for explicit authorization before starting Phase 13.
+- Wait for explicit authorization before starting Phase 14.
 
 ## Contracts Changed This Session
 
-- No shared contract or domain port changed in Phase 12.
-- The app-local `PublicSpringCatalogRow` mapping now includes `alternateNames`, matching the already-approved `public.public_spring_catalog` view.
-- Discovery uses only public-safe browse fields and remains client-side in this phase.
+- Added `UpdateSpringCommand` and `updateSpringCommandSchema` in `packages/contracts`.
+- Extended `SpringRepository` with admin-management methods for:
+  - `listManaged(...)`
+  - `getManagedById(...)`
+  - `update(...)`
+  - `findExistingSlugs(...)`
+- Added the shared `@maayanhot/use-cases` package so mobile and admin-web now call the same create and moderation orchestration logic.
+- Added the admin-only database surfaces `public.admin_spring_management_catalog`, `public.admin_spring_management_detail`, and `public.admin_update_spring(...)`.
 
 ## Versions Changed This Session
 
-- None
+- The previously deferred admin-web baseline is now implemented on `next@16.2.1`.
+- Admin web E2E coverage now uses `@playwright/test@1.58.2`.
 
 ## Risks Carried Forward
 
-- Discovery remains substring-based and client-side; Phase 12 intentionally does not add remote ranking, fuzzy matching, or viewport-specific backend requery.
+- Admin web is intentionally online-only in Phase 13; there is no offline admin support and no broader internal ops surface yet.
+- Spring management stays bounded to create/list/edit only; delete flows, bulk actions, and contributor management remain later work.
 - The Phase 11 React Native Vitest harness still emits upstream `react-test-renderer` deprecation warnings and some `act(...)` warnings in older tests even though the suite passes.

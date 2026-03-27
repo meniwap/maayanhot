@@ -37,6 +37,10 @@ export default defineConfig({
       '@maayanhot/navigation-core': fileURLToPath(
         new URL('./packages/navigation-core/src/index.ts', import.meta.url),
       ),
+      'next/link': fileURLToPath(new URL('./tests/mocks/next-link.tsx', import.meta.url)),
+      'next/navigation': fileURLToPath(
+        new URL('./tests/mocks/next-navigation.ts', import.meta.url),
+      ),
       '@testing-library/react-native': fileURLToPath(
         new URL('./tests/mocks/testing-library-react-native.ts', import.meta.url),
       ),
@@ -47,6 +51,9 @@ export default defineConfig({
       '@maayanhot/ui': fileURLToPath(new URL('./packages/ui/src/index.ts', import.meta.url)),
       '@maayanhot/upload-core': fileURLToPath(
         new URL('./packages/upload-core/src/index.ts', import.meta.url),
+      ),
+      '@maayanhot/use-cases': fileURLToPath(
+        new URL('./packages/use-cases/src/index.ts', import.meta.url),
       ),
     },
   },

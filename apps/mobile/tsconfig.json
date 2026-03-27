@@ -13,7 +13,8 @@
       "@maayanhot/navigation-core": ["packages/navigation-core/src/index.ts"],
       "@maayanhot/shared-utils": ["packages/shared-utils/src/index.ts"],
       "@maayanhot/ui": ["packages/ui/src/index.ts"],
-      "@maayanhot/upload-core": ["packages/upload-core/src/index.ts"]
+      "@maayanhot/upload-core": ["packages/upload-core/src/index.ts"],
+      "@maayanhot/use-cases": ["packages/use-cases/src/index.ts"]
     }
   },
   "include": ["app/**/*", "**/*.d.ts", "**/*.ts", "**/*.tsx"]

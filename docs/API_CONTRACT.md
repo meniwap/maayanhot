@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file defines the boundary between shared contracts, pure domain logic, and the database/application surfaces introduced through Phases 4, 5, 8, 9, and 10.
+This file defines the boundary between shared contracts, pure domain logic, and the database/application surfaces introduced through Phases 4, 5, 8, 9, 10, and 13.
 
 Non-negotiable rule:
 
@@ -48,6 +48,16 @@ Phase 12 adds:
   - search, filters, and sorting operate on already loaded `public.public_spring_catalog` rows only
   - no new public search RPC, ranking endpoint, or widened browse contract is introduced
 
+Phase 13 adds:
+
+- `packages/use-cases`
+  - shared UI-agnostic orchestration for create-spring, update-spring, and moderation-review flows
+  - mobile and admin-web must depend on the same use-case package instead of duplicating workflow logic in screens
+- `apps/admin-web/src/infrastructure/`
+  - app-local Next.js repository implementations and session wiring for admin spring management and staff moderation
+  - this layer may depend on concrete Supabase web runtime packages
+  - this layer must still satisfy `packages/domain` ports instead of bypassing them
+
 ## Local Supabase Structure
 
 Phase 4 adds:
@@ -58,6 +68,7 @@ Phase 4 adds:
 - `supabase/migrations/20260326210000_phase8_public_detail_and_upload.sql`
 - `supabase/migrations/20260326223000_phase9_moderation.sql`
 - `supabase/migrations/20260327090000_phase10_trust_and_projection.sql`
+- `supabase/migrations/20260327183000_phase13_admin_web.sql`
 - `supabase/seed/`
 - `supabase/tests/database/`
 
@@ -173,6 +184,7 @@ Stored fields align to the contract:
 
 - `spring_id`
 - `reporter_user_id`
+- `client_submission_id`
 - `observed_at`
 - `submitted_at`
 - `water_presence`
@@ -197,6 +209,7 @@ Stored fields align to the contract and upload abstraction:
 
 - `spring_id`
 - `report_id`
+- `client_media_draft_id`
 - `storage_bucket`
 - `storage_path`
 - `public_url`
@@ -257,6 +270,47 @@ Phase 5 security rule:
 - raw projection rows are not public
 - the only anonymous/authenticated public-safe read surface is `public.public_spring_catalog`
 - that view exposes derived status fields but omits internal lineage fields such as `derived_from_report_ids`
+
+## Admin-Only Surfaces
+
+Phase 13 adds bounded admin-web surfaces that remain separate from public browse/detail contracts.
+
+Admin spring management views:
+
+- `public.admin_spring_management_catalog`
+- `public.admin_spring_management_detail`
+
+Admin spring management write surface:
+
+- `public.admin_update_spring(...)`
+
+Rules:
+
+- these surfaces are admin-only
+- they expose only the fields needed for create/list/edit workflows
+- they do not widen the public-safe browse/detail model
+- spring updates remain canonical writes on `public.springs`
+- spring updates must create audit-linked entries rather than bypassing audit history
+
+## Shared Commands And Repositories
+
+Phase 13 shared command additions:
+
+- `UpdateSpringCommand`
+- `updateSpringCommandSchema`
+
+Phase 13 `SpringRepository` additions:
+
+- `listManaged(cursor?: string | null, limit?: number)`
+- `getManagedById(springId: SpringId)`
+- `update(command: UpdateSpringCommand)`
+- `findExistingSlugs(baseSlug: string, excludeSpringId?: SpringId | null)`
+
+Important rule:
+
+- admin-web spring management must go through `SpringRepository` and shared use-cases
+- admin-web moderation must keep using `ModerationQueueRepository`, `SpringReportRepository`, `SpringStatusProjectionRepository`, and the shared `ModerateReportFlow`
+- web UI must not reimplement moderation or spring-update business rules locally
 
 Phase 12 discovery rule:
 

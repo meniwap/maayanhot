@@ -3,10 +3,12 @@ import type {
   SpringReportRepository,
   SpringStatusProjectionRepository,
 } from '@maayanhot/domain';
-import { QueryClient } from '@tanstack/react-query';
+import { ModerateReportFlow } from '@maayanhot/use-cases';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ModerateReportFlow } from '../../apps/mobile/src/infrastructure/services/moderate-report-flow';
+type QueryInvalidator = {
+  invalidate: (queryKey: readonly unknown[]) => Promise<void>;
+};
 
 const makeReviewAggregate = () => ({
   media: [
@@ -88,7 +90,8 @@ describe('phase 9 moderation flow', () => {
   let moderationQueueRepository: ModerationQueueRepository;
   let springReportRepository: SpringReportRepository;
   let springStatusProjectionRepository: SpringStatusProjectionRepository;
-  let queryClient: QueryClient;
+  let queryInvalidator: QueryInvalidator;
+  let invalidateSpy: ReturnType<typeof vi.fn<(queryKey: readonly unknown[]) => Promise<void>>>;
 
   beforeEach(() => {
     moderationQueueRepository = {
@@ -108,14 +111,15 @@ describe('phase 9 moderation flow', () => {
       getBySpringId: vi.fn(),
       upsert: vi.fn(),
     };
-    queryClient = new QueryClient();
+    invalidateSpy = vi
+      .fn<(queryKey: readonly unknown[]) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    queryInvalidator = {
+      invalidate: (queryKey: readonly unknown[]) => invalidateSpy(queryKey),
+    };
   });
 
   it('approves a pending report through the moderation action path and persists the derived projection', async () => {
-    const invalidateSpy = vi
-      .spyOn(queryClient, 'invalidateQueries')
-      .mockResolvedValue(undefined as never);
-
     vi.mocked(moderationQueueRepository.getReviewByReportId).mockResolvedValue(
       makeReviewAggregate(),
     );
@@ -161,7 +165,7 @@ describe('phase 9 moderation flow', () => {
       moderationQueueRepository,
       springReportRepository,
       springStatusProjectionRepository,
-      queryClient,
+      queryInvalidator,
     );
 
     const result = await flow.submit({
@@ -190,15 +194,11 @@ describe('phase 9 moderation flow', () => {
         springId: 'spring-1',
       }),
     );
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['public-spring-catalog'] });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['public-spring-detail', 'spring-1'] });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['staff-moderation-queue'] });
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['staff-moderation-report-detail', 'report-2'],
-    });
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['staff-moderation-report-media', 'report-2'],
-    });
+    expect(invalidateSpy).toHaveBeenCalledWith(['public-spring-catalog']);
+    expect(invalidateSpy).toHaveBeenCalledWith(['public-spring-detail', 'spring-1']);
+    expect(invalidateSpy).toHaveBeenCalledWith(['staff-moderation-queue']);
+    expect(invalidateSpy).toHaveBeenCalledWith(['staff-moderation-report-detail', 'report-2']);
+    expect(invalidateSpy).toHaveBeenCalledWith(['staff-moderation-report-media', 'report-2']);
   });
 
   it('rejects a report and keeps the projection based only on previously approved reports', async () => {
@@ -247,7 +247,7 @@ describe('phase 9 moderation flow', () => {
       moderationQueueRepository,
       springReportRepository,
       springStatusProjectionRepository,
-      queryClient,
+      queryInvalidator,
     );
 
     const result = await flow.submit({
@@ -332,7 +332,7 @@ describe('phase 9 moderation flow', () => {
       moderationQueueRepository,
       springReportRepository,
       springStatusProjectionRepository,
-      queryClient,
+      queryInvalidator,
     );
 
     const result = await flow.submit({

@@ -1,6 +1,7 @@
 import type { ModerationReasonCode } from '@maayanhot/contracts';
 import { canModerateReports } from '@maayanhot/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ModerateReportFlow } from '@maayanhot/use-cases';
 import {
   AppText,
   Button,
@@ -19,7 +20,6 @@ import React, { useMemo, useState } from 'react';
 
 import { useDevSession } from '../dev-session/DevSessionProvider';
 import { formatWaterPresenceLabel } from '../public-read/public-status';
-import { ModerateReportFlow } from '../../infrastructure/services/moderate-report-flow';
 import { getSupabaseClient } from '../../infrastructure/supabase/client';
 import { moderationQueueRepository } from '../../infrastructure/supabase/repositories/moderation-queue-repository';
 import { springReportRepository } from '../../infrastructure/supabase/repositories/spring-report-repository';
@@ -99,7 +99,9 @@ export function ModerationReviewScreen({
       moderationQueueRepository,
       springReportRepository,
       springStatusProjectionRepository,
-      queryClient,
+      {
+        invalidate: (queryKey) => queryClient.invalidateQueries({ queryKey }),
+      },
     );
   }, [queryClient]);
 

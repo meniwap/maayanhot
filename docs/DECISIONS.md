@@ -326,6 +326,15 @@ This file records architecture and delivery decisions that materially affect fut
 - Alternatives considered: add a dedicated backend search surface now; keep discovery map-only; adopt a bottom-sheet or split-view coordination model instead of a simple toggle.
 - Consequences: Discovery stays coherent with the Phase 11 cached catalog path, map and list results cannot drift because they share one state object, and future server-backed ranking or viewport-query work remains an explicit later decision.
 
+## ADR-0037: Phase 13 Uses A Separate Next.js Admin Web App And Shared Use-Cases
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Phase 13 implements admin-web as a separate Next.js App Router app under `apps/admin-web`, moves create/update/moderation orchestration into `@maayanhot/use-cases`, and keeps repository implementations app-local in mobile and web.
+- Why: The project needs a real internal/admin surface now, but it must stay clearly separate from public/mobile read flows and must not duplicate business logic across platforms.
+- Alternatives considered: extend Expo web from the mobile app; keep admin-web as a placeholder longer; duplicate create/moderation logic separately in mobile and web feature containers.
+- Consequences: Web and mobile now share the same orchestration layer for spring creation and moderation, admin-web remains online-only, and Phase 13 adds bounded admin-only Supabase views/RPCs for list/edit workflows without widening public read exposure.
+
 ## Version Decision Summary
 
 - Node runtime baseline: 24.14.1.
@@ -358,4 +367,4 @@ This file records architecture and delivery decisions that materially affect fut
 - Phase 12 discovery baseline: search/filter/sort use only already loaded public catalog fields, and map/list coordination is a shared-state toggle rather than a separate list sync model.
 - Backend baseline: Supabase platform with CLI 2.84.2, PostgreSQL 17 compatibility, and PostGIS 3.6 compatibility.
 - Server-state baseline: TanStack Query 5.95.2.
-- Future admin-web baseline: Next.js 16.2.1, planned but not yet implemented.
+- Phase 13 admin-web baseline: Next.js 16.2.1 is now implemented as a separate App Router app with Playwright 1.58.2 browser coverage.
