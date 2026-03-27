@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file defines the boundary between shared contracts, pure domain logic, and the Phase 4/Phase 5 database foundation.
+This file defines the boundary between shared contracts, pure domain logic, and the database/application surfaces introduced through Phases 4, 5, 8, 9, and 10.
 
 Non-negotiable rule:
 
@@ -50,6 +50,8 @@ Phase 4 adds:
 - `supabase/migrations/20260326190000_initial_schema.sql`
 - `supabase/migrations/20260326193000_phase5_security.sql`
 - `supabase/migrations/20260326210000_phase8_public_detail_and_upload.sql`
+- `supabase/migrations/20260326223000_phase9_moderation.sql`
+- `supabase/migrations/20260327090000_phase10_trust_and_projection.sql`
 - `supabase/seed/`
 - `supabase/tests/database/`
 
@@ -85,6 +87,15 @@ Important rule:
 
 - report counters and `trust_score` are cached projection fields, not the source of truth
 
+Phase 10 trust rule:
+
+- trusted-contributor progression is computed from cached counters that themselves are refreshed from approved and rejected report history
+- the role sync uses explicit thresholds only:
+  - grant at `approved_report_count >= 5`, `trust_score >= 0.85`, and `pending_report_count = 0`
+  - retain at `approved_report_count >= 4`, `trust_score >= 0.72`, and `pending_report_count <= 1`
+- moderators and admins are excluded from this automatic trusted-contributor role sync
+- the sync only manages `trusted_contributor`; it never grants moderator or admin powers
+
 ### Roles
 
 Historical assignment table:
@@ -114,6 +125,12 @@ Phase 5 security rule:
 - authenticated users can read their own role/profile summary
 - moderators and admins can read broader role/profile data through underlying RLS
 - direct role-assignment writes remain RPC-only
+
+Phase 10 progression rule:
+
+- trusted-contributor assignment remains bounded and automatic only for ordinary contributors
+- Phase 10 does not grant trusted contributors any new moderation or spring-management permissions
+- the current effect of trusted-contributor status is limited to domain-level weighting and future explicit policy decisions
 
 ### Springs
 
@@ -235,6 +252,12 @@ Phase 5 security rule:
 - the only anonymous/authenticated public-safe read surface is `public.public_spring_catalog`
 - that view exposes derived status fields but omits internal lineage fields such as `derived_from_report_ids`
 
+Phase 10 projection hardening rule:
+
+- `public.staff_upsert_spring_status_projection(...)` now rejects stale recalculations by comparing `recalculated_at`
+- if a stale write is attempted, the RPC returns the existing cached row instead of overwriting it
+- canonical truth remains approved report history plus moderation state; the projection table is still cache-only
+
 ### Auditability
 
 Audit log table:
@@ -354,15 +377,8 @@ Omitted fields:
 - `derived_from_report_ids`
 - `approved_report_count_considered`
 
-Phase 6 mobile browse rule:
+Public-safe detail rule:
 
-- the mobile map browse shell currently uses a local fixture that mirrors the `public.public_spring_catalog` shape
-- this keeps Phase 6 inside the map/UI scope without adding a repository or Supabase client implementation early
-- once repository-backed browse data is introduced later, it must still target this public-safe read surface rather than raw report tables
-
-Phase 7 public-safe detail rule:
-
-- the mobile spring-detail read flow currently uses a local fixture that mirrors the intended public-safe detail read model
 - the detail read model is narrower than raw table access and must include only:
   - canonical spring identity and location fields
   - derived public projection fields:
@@ -384,7 +400,7 @@ Phase 7 public-safe detail rule:
   - audit metadata
   - internal projection lineage such as `derived_from_report_ids`
   - write-capability flags
-- when repository-backed detail reads are introduced later, they must preserve this public-safe shape rather than widening raw table exposure
+- repository-backed detail reads must preserve this public-safe shape rather than widening raw table exposure
 
 Phase 8 repository-backed read rule:
 
@@ -411,6 +427,30 @@ They still omit:
 - moderation status and reviewer/staff metadata
 - trust/audit fields
 - projection lineage internals
+
+Phase 9 staff-only moderation surfaces:
+
+- `public.staff_moderation_queue`
+- `public.staff_moderation_report_detail`
+- `public.staff_moderation_report_media`
+
+These surfaces are:
+
+- readable only by authenticated moderator/admin sessions through `security_invoker` views plus underlying RLS
+- intentionally non-public
+- bounded to pending review work and private preview metadata
+
+They may expose:
+
+- pending report note text
+- reporter role snapshot
+- private storage bucket/path metadata for signed preview generation
+
+They must still stay out of public/mobile read flows:
+
+- raw `audit_entries`
+- reviewer-only internal notes outside the moderation review flow
+- private storage paths outside signed preview generation
 
 Raw/internal tables remain protected by direct table grants plus RLS:
 
@@ -450,7 +490,9 @@ Raw/internal tables remain protected by direct table grants plus RLS:
 ### Moderator
 
 - may read raw springs, projections, reports, report media, role/profile data, moderation actions, and audit entries
-- may insert moderation actions
+- may read the staff moderation queue/detail/media views
+- may execute `public.moderate_report(...)`
+- may execute `public.staff_upsert_spring_status_projection(...)`
 - may not create/update/delete springs
 - may not manage roles
 - may not delete storage objects
@@ -545,6 +587,42 @@ Write-flow rule:
 - metadata finalization happens after the binary upload succeeds
 - none of these actions make the report public automatically
 
+## Phase 9 Moderation Surfaces
+
+Staff moderation read surfaces:
+
+- `public.staff_moderation_queue`
+  - pending reports only
+  - oldest-first review ordering
+  - spring title/slug/region
+  - report id
+  - observed/submitted timestamps
+  - water presence
+  - full note text
+  - reporter role snapshot
+  - photo count
+- `public.staff_moderation_report_detail`
+  - one pending report review aggregate
+- `public.staff_moderation_report_media`
+  - uploaded private media metadata for signed preview generation
+
+Staff moderation write RPC:
+
+- `public.moderate_report(...)`
+  - moderator/admin only
+  - accepts approve/reject plus optional rejection note
+  - reject requires a reason code
+  - approve forbids a reason code
+  - inserts immutable rows into `public.moderation_actions`
+  - relies on the existing trigger chain to update report moderation state and write audit entries
+
+Staff projection cache RPC:
+
+- `public.staff_upsert_spring_status_projection(...)`
+  - moderator/admin only
+  - persists derived projection cache rows after moderation decisions
+  - does not replace report history as primary truth
+
 ## Phase 8 Mobile Application Boundary
 
 Concrete app-local repositories now exist for:
@@ -563,6 +641,18 @@ They must not:
 - bypass `packages/domain` port contracts
 - widen raw table exposure beyond the approved read surfaces
 
+Phase 9 adds app-local repositories and services for:
+
+- moderation queue reads
+- moderation review reads
+- moderation decision submission
+- projection-cache upsert after approval/rejection
+
+Phase 9 mobile application rule:
+
+- moderation queue and review screens must still go through repositories, flow services, and `packages/upload-core`
+- screens may not call moderation RPCs, storage signed-URL helpers, or projection-cache writes directly
+
 ## Development Session Bootstrap
 
 Tracked env template:
@@ -572,12 +662,16 @@ Tracked env template:
 Tracked public env names:
 
 - `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `EXPO_PUBLIC_DEV_SESSION_ENABLED`
 - `EXPO_PUBLIC_DEV_ADMIN_EMAIL`
 - `EXPO_PUBLIC_DEV_ADMIN_PASSWORD`
 - `EXPO_PUBLIC_DEV_USER_EMAIL`
 - `EXPO_PUBLIC_DEV_USER_PASSWORD`
+
+Development-session demo identities may exist in the linked Supabase project for local testing, but
+their passwords must remain only in untracked local secret storage such as
+`apps/mobile/.env.local`. Do not commit demo passwords into repo content, notes, or docs.
 
 One-time demo-admin bootstrap requirement:
 
@@ -622,7 +716,7 @@ Current strategy:
 
 - the real remote Supabase project already exists under the exact required name `maayanhot`
 - the local repo is linked to project ref `xcjjvundvdpkxnkkkplp`
-- `npx supabase db push --linked` succeeded in Phase 8, so the linked project now includes the committed Phase 5 and Phase 8 migrations
+- `npx supabase db push --linked` succeeded in Phase 8 and again in Phase 9, so the linked project now includes the committed Phase 5, Phase 8, and Phase 9 migrations
 
 ## Boundary Reminder
 
@@ -634,10 +728,11 @@ Phase 5 still does not authorize:
 - provider-specific upload logic beyond the storage policy foundation
 - moderation UI flows
 
-Phase 8 still does not authorize:
+Phase 9 still does not authorize:
 
 - direct screen-level Supabase access
 - raw report browsing in the public mobile read flow
-- moderation UI or approve/reject actions
+- trusted-contributor privilege expansion
+- public exposure of pending/rejected content
 - write-path shortcuts that bypass repositories, flow services, or upload-core
 - direct provider URL construction or `expo-linking` calls from screens

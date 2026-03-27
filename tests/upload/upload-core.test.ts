@@ -1,5 +1,6 @@
 import {
   UploadValidationError,
+  createSupabasePrivateMediaPreviewAdapter,
   createSupabaseUploadAdapter,
   reportImageUploadPolicy,
   type PendingUpload,
@@ -105,5 +106,30 @@ describe('supabase upload adapter', () => {
     expect(retryResult.mediaId).toBe('media-1');
     expect(retryResult.storagePath).toBe(pendingUpload.storagePath);
     expect(uploadMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates signed preview urls through the private preview adapter', async () => {
+    const createSignedUrlMock = vi.fn(async () => ({
+      data: {
+        signedUrl: 'https://example.com/report-1.jpg?token=signed',
+      },
+      error: null,
+    }));
+    const previewAdapter = createSupabasePrivateMediaPreviewAdapter({
+      storage: {
+        from: () => ({
+          createSignedUrl: createSignedUrlMock,
+        }),
+      },
+    } as never);
+
+    const result = await previewAdapter.createSignedPreviewUrl({
+      storageBucket: 'report-media',
+      storagePath: 'user-1/report-1/media-1.jpg',
+    });
+
+    expect(result.signedUrl).toContain('token=signed');
+    expect(result.storageBucket).toBe('report-media');
+    expect(createSignedUrlMock).toHaveBeenCalledWith('user-1/report-1/media-1.jpg', 900);
   });
 });

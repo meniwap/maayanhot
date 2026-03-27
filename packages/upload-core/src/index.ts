@@ -34,6 +34,19 @@ export type UploadResult = {
   exifStripped: boolean;
 };
 
+export type PrivateMediaPreviewRequest = {
+  expiresInSeconds?: number;
+  storageBucket: string;
+  storagePath: string;
+};
+
+export type PrivateMediaPreviewResult = {
+  expiresInSeconds: number;
+  signedUrl: string;
+  storageBucket: string;
+  storagePath: string;
+};
+
 export type UploadPolicy = {
   maxBytes: number;
   allowedMimeTypes: string[];
@@ -45,6 +58,10 @@ export interface UploadAdapter {
   validate(asset: UploadAssetDescriptor, policy: UploadPolicy): Promise<void> | void;
   upload(pending: PendingUpload): Promise<UploadResult>;
   retry(pending: PendingUpload): Promise<UploadResult>;
+}
+
+export interface PrivateMediaPreviewAdapter {
+  createSignedPreviewUrl(request: PrivateMediaPreviewRequest): Promise<PrivateMediaPreviewResult>;
 }
 
 export class UploadValidationError extends Error {
@@ -141,5 +158,31 @@ export const createSupabaseUploadAdapter = (
     ensureSizeAllowed(pending.asset, policy);
 
     return uploadPendingAsset(client, pending);
+  },
+});
+
+export const createSupabasePrivateMediaPreviewAdapter = (
+  client: SupabaseStorageClient,
+  defaultExpiresInSeconds = 60 * 15,
+): PrivateMediaPreviewAdapter => ({
+  async createSignedPreviewUrl(request) {
+    const expiresInSeconds = request.expiresInSeconds ?? defaultExpiresInSeconds;
+    const { data, error } = await client.storage
+      .from(request.storageBucket)
+      .createSignedUrl(request.storagePath, expiresInSeconds);
+
+    if (error || !data?.signedUrl) {
+      throw new UploadValidationError(
+        'preview_url_failed',
+        error?.message ?? 'Unable to create a signed preview URL.',
+      );
+    }
+
+    return {
+      expiresInSeconds,
+      signedUrl: data.signedUrl,
+      storageBucket: request.storageBucket,
+      storagePath: request.storagePath,
+    };
   },
 });

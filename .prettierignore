@@ -1,6 +1,11 @@
 node_modules
 .expo
+apps/mobile/.expo
+apps/mobile/ios
+apps/mobile/android
 .next
 coverage
 dist
+supabase/.branches
+supabase/.temp
 pnpm-lock.yaml

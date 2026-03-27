@@ -16,6 +16,8 @@ import type {
 import type {
   AuditEntry,
   ModerationAction,
+  ModerationQueueItem,
+  ModerationReviewAggregate,
   Spring,
   SpringMedia,
   SpringReport,
@@ -60,6 +62,17 @@ export type FinalizeReportMediaUploadCommand = {
   width: number | null;
 };
 
+export type UpsertSpringStatusProjectionCommand = {
+  approvedReportCountConsidered: number;
+  confidence: SpringStatusProjection['confidence'];
+  derivedFromReportIds: ReportId[];
+  freshness: SpringStatusProjection['freshness'];
+  latestApprovedReportAt: IsoTimestampString | null;
+  recalculatedAt: IsoTimestampString;
+  springId: SpringId;
+  waterPresence: SpringStatusProjection['waterPresence'];
+};
+
 export interface UserProfileRepository {
   getById(userId: UserId): Promise<UserProfile | null>;
   listByIds(userIds: UserId[]): Promise<UserProfile[]>;
@@ -86,7 +99,8 @@ export interface SpringReportRepository {
 }
 
 export interface ModerationQueueRepository {
-  listPending(cursor?: string | null, limit?: number): Promise<CursorPage<SpringReport>>;
+  listPending(cursor?: string | null, limit?: number): Promise<CursorPage<ModerationQueueItem>>;
+  getReviewByReportId(reportId: ReportId): Promise<ModerationReviewAggregate | null>;
   applyDecision(command: ModerateReportCommand): Promise<ModerationAction>;
 }
 
@@ -97,5 +111,5 @@ export interface AuditLogRepository {
 
 export interface SpringStatusProjectionRepository {
   getBySpringId(springId: SpringId): Promise<SpringStatusProjection | null>;
-  upsert(projection: SpringStatusProjection): Promise<SpringStatusProjection>;
+  upsert(projection: UpsertSpringStatusProjectionCommand): Promise<SpringStatusProjection>;
 }

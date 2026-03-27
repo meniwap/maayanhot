@@ -236,10 +236,75 @@ This file records architecture and delivery decisions that materially affect fut
 - Alternatives considered: upload directly from screens; create media rows after uploading with ad hoc metadata; bypass manual bootstrap by widening role-management policies.
 - Consequences: Upload retries reuse the same reserved media slot, report submissions remain pending until moderation, and project setup now requires a documented one-time demo-admin bootstrap step in the linked Supabase project.
 
+## ADR-0027: Phase 9 Moderation Uses Staff Views Plus RPC-Only Decision Writes
+
+- Status: Accepted
+- Date: 2026-03-26
+- Decision: Phase 9 introduces `staff_moderation_queue`, `staff_moderation_report_detail`, and `staff_moderation_report_media` as staff-only read surfaces, while moderation decisions themselves must go through `public.moderate_report(...)` instead of direct table inserts from clients.
+- Why: Moderation needs focused review context and private media preview support without widening public read surfaces or letting screens mutate moderation state ad hoc.
+- Alternatives considered: keep direct moderator inserts on `moderation_actions`; expose raw tables directly to the moderation UI; fold moderation reads into the public detail surfaces.
+- Consequences: Moderator/admin UI now reads through explicit queue/review surfaces, direct client insert to `moderation_actions` is revoked, and the public read contract stays unchanged.
+
+## ADR-0028: Phase 9 Reuses Domain Status Derivation After Moderation
+
+- Status: Accepted
+- Date: 2026-03-26
+- Decision: After approve/reject actions, the mobile moderation flow reloads reports/media for the spring, reuses `deriveSpringStatusProjection(...)` from `packages/domain`, and persists only the derived cache through `public.staff_upsert_spring_status_projection(...)`.
+- Why: Approved reports must influence public status only through the same derivation path used elsewhere, while rejected reports must remain excluded from the public source of truth.
+- Alternatives considered: update `spring_status_projections` directly in UI code; duplicate the status logic inside the moderation screen; let moderation RPCs compute and store status implicitly with screen-specific rules.
+- Consequences: Projection updates remain explicit, testable, and cache-only, while report history plus moderation state remain the primary truth model.
+
+## ADR-0029: Standardize Local Supabase Testing On A Pinned Repo-Local CLI Plus Docker Desktop
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Use a pinned repo-local `supabase@2.84.2` devDependency with `pnpm exec` scripts for local DB start/reset/test commands, and treat Docker Desktop as the official Docker-compatible runtime standard on this Mac.
+- Why: The official Supabase local-development path requires a Docker-compatible runtime, and a repo-local CLI avoids global-install drift while making `pnpm db:local:start`, `pnpm db:local:reset`, and `pnpm db:test:local` repeatable.
+- Alternatives considered: keep using ad hoc `npx` resolution only; standardize on a global CLI install; standardize on OrbStack or Colima instead of Docker Desktop.
+- Consequences: `pnpm-workspace.yaml` now allows the Supabase postinstall build, the root package owns the local DB scripts, and local DB tests are now runnable and documented instead of remaining a known gap.
+
+## ADR-0030: Standardize Native Local E2E On `com.meniwap.maayanhot` And iOS-First Maestro
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Use `com.meniwap.maayanhot` as the canonical native bundle/package identifier, route committed Maestro flows through that real app id, and treat iOS simulator as the official local Maestro smoke path on this Mac.
+- Why: Maestro requires a real installed native app id rather than an Expo scheme, and iOS simulator tooling is already present and verifiable here.
+- Alternatives considered: keep using the older `springs-israel` app id in Maestro; make Android the primary local path; use the heavier moderation flow as the first tooling proof instead of a narrow smoke route.
+- Consequences: `apps/mobile/app.json` now owns the canonical native identifier, `.maestro/smoke-dev-session.yaml` is the first local smoke proof, and generated native output is treated as local tooling artifact rather than committed source of truth.
+
+## ADR-0031: Resolve Expo-Managed Native Drift With `expo install`, Not Ad Hoc Patches
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: When a native Expo module drifts out of a working SDK-compatible state during local tooling enablement, use the official `expo install` alignment path instead of hand-editing pods or patching node_modules.
+- Why: The first iOS build failed inside `expo-image-picker`, and the successful fix was the official Expo-managed install path that aligned the dependency to the working SDK 55-native module version.
+- Alternatives considered: patch generated iOS files directly; patch `node_modules`; leave the native build path blocked and document it without attempting the official Expo alignment step.
+- Consequences: `expo-image-picker` now follows the Expo-managed version emitted by `expo install`, and future native build drift in SDK-managed packages should use the same alignment-first approach.
+
+## ADR-0032: Trusted Contributor Progression Is Automatic, Bounded, And History-Based
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Phase 10 derives the `trusted_contributor` role from explicit thresholds on approved-report count, trust score, and pending-report count, and synchronizes that role automatically during `refresh_user_report_snapshot(...)`.
+- Why: The project needs a testable contributor-progression model that rewards reliable approved history without inventing UI-local trust logic or granting unsafe shortcuts.
+- Alternatives considered: manual admin assignment only; immediate trusted-contributor privilege expansion; implicit trust logic embedded in screens or repository code.
+- Consequences: Trusted contributor remains distinct from moderator/admin, future privilege expansion stays possible but explicit, and the current role mainly affects downstream domain weighting through `reporter_role_snapshot`.
+
+## ADR-0033: Projection Cache Writes Must Reject Stale Recalculations
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Phase 10 hardens `public.staff_upsert_spring_status_projection(...)` so it updates the cache only when the incoming `recalculated_at` is newer or equal, and otherwise returns the existing cached row.
+- Why: Moderation-driven recalculations and future background refresh paths can race. A stale cache write would incorrectly overwrite a more recent derived status even though projections are not canonical truth.
+- Alternatives considered: trust client ordering only; move all projection writes into ad hoc UI logic; allow last-write-wins regardless of timestamp.
+- Consequences: The projection path stays cache-only but becomes safer under concurrency, and both the domain/application path and the SQL write surface now share the same anti-stale intent.
+
 ## Version Decision Summary
 
 - Node runtime baseline: 24.14.1.
 - Contributor runtime pin: Node 24.14.1 across local version-manager files, `engines`, and CI.
+- Local Supabase DB tooling baseline: pinned repo-local CLI via `pnpm exec`, with Docker Desktop as the official runtime standard on this Mac.
+- Local Maestro tooling baseline: iOS simulator first, using the canonical app id `com.meniwap.maayanhot`.
 - Package manager baseline: pnpm 10.33.0.
 - Mobile framework baseline: Expo SDK 55 with Expo-managed dependency versions.
 - Phase 1 tooling baseline: ESLint 10.1.0, `typescript-eslint` 8.57.2, Prettier 3.8.1, and Vitest 4.0.16.
@@ -258,6 +323,8 @@ This file records architecture and delivery decisions that materially affect fut
 - Phase 7 read-flow baseline: the dedicated detail route stays on a local public-safe fixture, exposes approved gallery/history summaries only, and routes external navigation through `packages/navigation-core` rather than direct screen-level provider logic.
 - Phase 8 mobile data baseline: public browse and public detail now come from repository-backed public-safe Supabase surfaces rather than local fixtures.
 - Phase 8 write-flow baseline: admin spring creation and user report submission now run through app-local repositories, flow services, and a real dev-session switcher instead of local fake roles.
+- Phase 9 moderation baseline: moderators/admins now review pending reports through staff-only Supabase views, submit approve/reject decisions through an RPC-only write surface, and refresh the public projection cache through the shared domain derivation path.
+- Phase 9 media-preview baseline: private moderation previews are generated through a signed-URL helper inside `packages/upload-core`, not through direct screen-level storage calls.
 - Phase 8 upload baseline: uploads are sequential, slot-based, and routed through `packages/upload-core` with a Supabase storage adapter.
 - Backend baseline: Supabase platform with CLI 2.84.2, PostgreSQL 17 compatibility, and PostGIS 3.6 compatibility.
 - Server-state baseline: TanStack Query 5.95.2.

@@ -142,6 +142,7 @@ export class SupabaseSpringReportRepository implements SpringReportRepository {
       .from('report_media')
       .select('*')
       .in('report_id', reportIds)
+      .eq('upload_state', 'uploaded')
       .order('created_at', { ascending: true });
 
     if (error) {

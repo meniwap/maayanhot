@@ -4,6 +4,8 @@ import type {
   CreateSpringCommand,
   GetSpringDetailQuery,
   ModerateReportCommand,
+  ModerationQueueItemRecord,
+  ModerationReviewRecord,
   SpringReportRecord,
   SubmitSpringReportCommand,
   UserProfileRecord,
@@ -11,6 +13,8 @@ import type {
 import type {
   AuditLogRepository,
   CursorPage,
+  ModerationQueueItem,
+  ModerationReviewAggregate,
   SpringBrowseItem,
   SpringDetailAggregate,
   SpringReportRepository,
@@ -26,7 +30,7 @@ import type {
 } from '@maayanhot/domain';
 import type { MapAdapter } from '@maayanhot/map-core';
 import type { ExternalNavigationAdapter } from '@maayanhot/navigation-core';
-import type { UploadAdapter } from '@maayanhot/upload-core';
+import type { PrivateMediaPreviewAdapter, UploadAdapter } from '@maayanhot/upload-core';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 const sampleProfile: UserProfile = {
@@ -207,8 +211,56 @@ const springReportRepository = {
 
 const moderationQueueRepository = {
   listPending: async () => ({
-    items: [sampleReport],
+    items: [
+      {
+        reportId: 'report-1',
+        springId: 'spring-1',
+        springSlug: 'ein-karem',
+        springTitle: 'עין כרם',
+        regionCode: 'jerusalem',
+        observedAt: '2026-03-24T08:00:00.000Z',
+        submittedAt: '2026-03-24T08:30:00.000Z',
+        waterPresence: 'water',
+        note: 'יש זרימה חלשה.',
+        reporterRoleSnapshot: 'moderator',
+        photoCount: 1,
+      },
+    ],
     nextCursor: null,
+  }),
+  getReviewByReportId: async () => ({
+    media: [
+      {
+        id: 'media-1',
+        springId: 'spring-1',
+        reportId: 'report-1',
+        storageBucket: 'report-media',
+        storagePath: 'reports/report-1/cover.jpg',
+        mediaType: 'image',
+        width: 1200,
+        height: 900,
+        byteSize: 210000,
+        capturedAt: '2026-03-24T08:00:00.000Z',
+        createdAt: '2026-03-24T08:31:00.000Z',
+        sortOrder: 0,
+        uploadState: 'uploaded',
+      },
+    ],
+    review: {
+      reportId: 'report-1',
+      springId: 'spring-1',
+      springSlug: 'ein-karem',
+      springTitle: 'עין כרם',
+      regionCode: 'jerusalem',
+      observedAt: '2026-03-24T08:00:00.000Z',
+      submittedAt: '2026-03-24T08:30:00.000Z',
+      waterPresence: 'water',
+      note: 'יש זרימה חלשה.',
+      reporterRoleSnapshot: 'moderator',
+      photoCount: 1,
+      accessNotes: 'ירידה קצרה בשביל',
+      description: 'מעיין לדוגמה עבור בדיקות חוזה.',
+    },
   }),
   applyDecision: async (command: ModerateReportCommand) => {
     void command;
@@ -232,7 +284,10 @@ const auditLogRepository = {
 
 const springStatusProjectionRepository = {
   getBySpringId: async () => sampleProjection,
-  upsert: async (projection: SpringStatusProjection) => projection,
+  upsert: async (projection: Parameters<SpringStatusProjectionRepository['upsert']>[0]) => ({
+    ...sampleProjection,
+    ...projection,
+  }),
 } satisfies SpringStatusProjectionRepository;
 
 const mapAdapter = {
@@ -269,6 +324,15 @@ const uploadAdapter = {
   }),
 } satisfies UploadAdapter;
 
+const privateMediaPreviewAdapter = {
+  createSignedPreviewUrl: async () => ({
+    expiresInSeconds: 900,
+    signedUrl: 'https://example.com/report-1.jpg?token=signed',
+    storageBucket: 'report-media',
+    storagePath: 'reports/report-1/cover.jpg',
+  }),
+} satisfies PrivateMediaPreviewAdapter;
+
 describe('contract and adapter port conformance', () => {
   it('keeps repository interfaces aligned to the shared contract layer', () => {
     expectTypeOf(userProfileRepository).toMatchTypeOf<UserProfileRepository>();
@@ -290,12 +354,17 @@ describe('contract and adapter port conformance', () => {
     expectTypeOf(mapAdapter).toMatchTypeOf<MapAdapter>();
     expectTypeOf(navigationAdapter).toMatchTypeOf<ExternalNavigationAdapter>();
     expectTypeOf(uploadAdapter).toMatchTypeOf<UploadAdapter>();
+    expectTypeOf(privateMediaPreviewAdapter).toMatchTypeOf<PrivateMediaPreviewAdapter>();
     expect(true).toBe(true);
   });
 
   it('keeps domain aliases structurally compatible with the shared records', () => {
     expectTypeOf<UserProfile>().toEqualTypeOf<Readonly<UserProfileRecord>>();
     expectTypeOf<SpringReport>().toEqualTypeOf<Readonly<SpringReportRecord>>();
+    expectTypeOf<ModerationQueueItem>().toEqualTypeOf<Readonly<ModerationQueueItemRecord>>();
+    expectTypeOf<ModerationReviewAggregate['review']>().toEqualTypeOf<
+      Readonly<ModerationReviewRecord>
+    >();
     expectTypeOf(sampleAuditEntry).toMatchTypeOf<AuditEntryRecord>();
     expect(true).toBe(true);
   });

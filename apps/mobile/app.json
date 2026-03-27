@@ -5,6 +5,12 @@
     "scheme": "springs-israel",
     "version": "0.1.0",
     "orientation": "portrait",
+    "ios": {
+      "bundleIdentifier": "com.meniwap.maayanhot"
+    },
+    "android": {
+      "package": "com.meniwap.maayanhot"
+    },
     "plugins": ["expo-router", "@maplibre/maplibre-react-native"]
   }
 }

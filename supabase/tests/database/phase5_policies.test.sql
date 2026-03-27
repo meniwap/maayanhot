@@ -23,7 +23,7 @@ select ok(
       on namespace.oid = class.relnamespace
     where namespace.nspname = 'public'
       and class.relname = 'public_spring_catalog'
-      and pg_get_viewdef(class.oid, true) like '%where spring.is_published = true%'
+      and lower(pg_get_viewdef(class.oid, true)) like '%where spring.is_published = true%'
   ),
   'public_spring_catalog should expose published springs only'
 );
@@ -166,9 +166,9 @@ select ok(
     from pg_policies
     where schemaname = 'public'
       and tablename = 'moderation_actions'
-      and policyname = 'moderation_actions_insert_staff_only'
+      and policyname = 'moderation_actions_select_owner_or_staff'
   ),
-  'moderation_actions should have a staff-only insert policy'
+  'moderation_actions should keep the owner-or-staff select policy'
 );
 
 select ok(

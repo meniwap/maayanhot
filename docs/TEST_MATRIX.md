@@ -9,7 +9,7 @@
 
 ## Current Status
 
-Phase 8 now adds executable create/report/upload integration tests, device permission tests, upload-core tests, and public-detail/upload database guardrails on top of the earlier phase coverage.
+Phase 10 adds trusted-contributor progression coverage, refined derived-status coverage, and explicit projection-cache update coverage on top of the earlier moderation and tooling baselines.
 
 ## Inventory By Category
 
@@ -21,6 +21,11 @@ Phase 8 now adds executable create/report/upload integration tests, device permi
 | Tooling          | `lint` command passes                                                                  | 1                 | Complete |
 | Tooling          | `typecheck` command passes                                                             | 1                 | Complete |
 | Tooling          | `test` command passes in CI                                                            | 1                 | Complete |
+| Tooling          | Local Supabase stack starts through `pnpm db:local:start`                              | Pre-10            | Complete |
+| Tooling          | Local Supabase reset path runs through `pnpm db:local:reset`                           | Pre-10            | Complete |
+| Tooling          | Local database test path runs through `pnpm db:test:local`                             | Pre-10            | Complete |
+| Tooling          | Native iOS development build installs with `npx expo run:ios --device "iPhone 17"`     | Pre-10            | Complete |
+| Tooling          | Local Maestro smoke flow runs on iOS simulator                                         | Pre-10            | Complete |
 | UI Foundation    | Theme token structure and central theme-swap tests                                     | 2                 | Complete |
 | UI Foundation    | Button label, variant, and disabled-state tests                                        | 2                 | Complete |
 | UI Foundation    | StatusBadge semantic styling tests                                                     | 2                 | Complete |
@@ -57,12 +62,14 @@ Phase 8 now adds executable create/report/upload integration tests, device permi
 | Upload           | Upload-core MIME/size validation tests                                                 | 8                 | Complete |
 | Upload           | Reserved-slot retry tests                                                              | 8                 | Complete |
 | Database         | Public-safe detail surface and upload-RPC guardrail tests                              | 8                 | Complete |
-| Moderation       | Moderation queue integration test                                                      | 9                 | Planned  |
-| Moderation       | Approve/reject state transition tests                                                  | 9                 | Planned  |
-| Moderation       | Audit trail creation test                                                              | 9                 | Planned  |
-| Trust And Status | Trust escalation rules tests                                                           | 10                | Planned  |
-| Trust And Status | Stale/recent/unknown status derivation tests                                           | 10                | Planned  |
-| Trust And Status | Cached projection update tests                                                         | 10                | Planned  |
+| Moderation       | Moderation queue integration test                                                      | 9                 | Complete |
+| Moderation       | Approve/reject state transition tests                                                  | 9                 | Complete |
+| Moderation       | Audit-linked moderation SQL/policy guardrails                                          | 9                 | Complete |
+| Moderation       | Moderation queue/review UI tests                                                       | 9                 | Complete |
+| Moderation       | Maestro approval-flow artifact committed                                               | 9                 | Complete |
+| Trust And Status | Trust escalation rules tests                                                           | 10                | Complete |
+| Trust And Status | Stale/recent/unknown status derivation tests                                           | 10                | Complete |
+| Trust And Status | Cached projection update tests                                                         | 10                | Complete |
 | Offline          | Queue enqueue/dequeue tests                                                            | 11                | Planned  |
 | Offline          | Retry and backoff rules tests                                                          | 11                | Planned  |
 | Offline          | Reconnect merge tests                                                                  | 11                | Planned  |
@@ -83,32 +90,32 @@ Phase 8 now adds executable create/report/upload integration tests, device permi
 
 - Unit and domain tests: Vitest
 - Mobile component tests: React Native Testing Library is the intended long-term library, but Phase 2 currently runs a local compatibility harness on top of `react-test-renderer` to keep Vitest as the sole runner
-- Mobile E2E: Maestro
+- Mobile E2E: Maestro, now proven locally on iOS simulator with `.maestro/smoke-dev-session.yaml`
 - Admin web E2E: Playwright
-- Database and policy tests: SQL-based checks plus integration harnesses run from CI; Phase 5 currently commits pgTAP policy suites and backs them with executable Vitest migration guardrails until the Supabase CLI/local stack is available in the environment
+- Database and policy tests: SQL-based checks plus integration harnesses run from CI; the repo now also has a proven local pgTAP command path through pinned `supabase` CLI scripts plus Docker Desktop on this Mac
 
 Exact tool versions will be pinned when those tools are introduced in code and added to `docs/VERSIONS.md` if they are not already covered by the baseline.
 
 ## Phase Gates
 
-| Phase | Required validation gate                                           |
-| ----- | ------------------------------------------------------------------ |
-| 0     | Documentation completeness and version-verification review         |
-| 1     | Clean install, lint, typecheck, and test commands running in CI    |
-| 2     | Shared UI primitive tests and RTL-aware baseline checks            |
-| 3     | Contract and domain tests                                          |
-| 4     | Migration, constraint, and geospatial tests                        |
-| 5     | RLS and storage policy tests                                       |
-| 6     | Map behavior and basic mobile rendering tests                      |
-| 7     | Read-flow integration and screen tests                             |
-| 8     | Create/report/upload integration and permission tests              |
-| 9     | Moderation integration, state-transition, and E2E moderation tests |
-| 10    | Status derivation, trust escalation, and projection tests          |
-| 11    | Offline queue, reconnect, and offline-lite E2E tests               |
-| 12    | Discovery/search/filter behavior tests                             |
-| 13    | Admin integration and E2E tests                                    |
-| 14    | Resilience, abuse, and performance smoke checks                    |
-| 15    | Release smoke verification and critical-journey E2E pass           |
+| Phase | Required validation gate                                                                         |
+| ----- | ------------------------------------------------------------------------------------------------ |
+| 0     | Documentation completeness and version-verification review                                       |
+| 1     | Clean install, lint, typecheck, and test commands running in CI                                  |
+| 2     | Shared UI primitive tests and RTL-aware baseline checks                                          |
+| 3     | Contract and domain tests                                                                        |
+| 4     | Migration, constraint, and geospatial tests                                                      |
+| 5     | RLS and storage policy tests                                                                     |
+| 6     | Map behavior and basic mobile rendering tests                                                    |
+| 7     | Read-flow integration and screen tests                                                           |
+| 8     | Create/report/upload integration and permission tests                                            |
+| 9     | Moderation integration, state-transition, SQL/policy guardrails, and committed E2E flow artifact |
+| 10    | Status derivation, trust escalation, and projection tests                                        |
+| 11    | Offline queue, reconnect, and offline-lite E2E tests                                             |
+| 12    | Discovery/search/filter behavior tests                                                           |
+| 13    | Admin integration and E2E tests                                                                  |
+| 14    | Resilience, abuse, and performance smoke checks                                                  |
+| 15    | Release smoke verification and critical-journey E2E pass                                         |
 
 ## Exit Criteria For A Testable Phase
 

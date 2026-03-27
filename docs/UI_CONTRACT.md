@@ -38,8 +38,9 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
 | Profile / Auth      | Show user identity, role, contribution state         | load current profile and capability flags                                        | render profile cards, contribution summaries, settings rows                              |
 | Admin Spring Editor | Create or edit a spring as an authorized role        | load/save spring form, gate unauthorized access                                  | render structured spring form UI                                                         |
 | Moderation Queue    | Review pending reports                               | fetch queue, trigger approve/reject mutations, surface audit context             | render report cards, moderation actions, decision reasons                                |
+| Moderation Review   | Review one pending report in detail                  | load review aggregate, generate private previews, submit approve/reject actions  | render staff-only review context, photo previews, and decision controls                  |
 
-## Phase 8 Route Baseline
+## Current Route Baseline
 
 - `apps/mobile/app/index.tsx` is now the Phase 6 default map-browse route.
 - `apps/mobile/app/foundation-showcase.tsx` keeps the old token/theme proof surface available as an internal non-product route.
@@ -47,6 +48,8 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
 - `apps/mobile/app/dev/session.tsx` is now the development-only real-session switcher route.
 - `apps/mobile/app/admin/springs/new.tsx` is now the admin create-spring route.
 - `apps/mobile/app/springs/[springId]/report.tsx` is now the authenticated report-compose route.
+- `apps/mobile/app/moderation/queue.tsx` is now the staff-only moderation queue route.
+- `apps/mobile/app/moderation/reports/[reportId].tsx` is now the staff-only moderation review route.
 - The default map-browse route renders:
   - the map surface
   - marker selection state
@@ -205,14 +208,43 @@ type ReportDraftVM = {
 ```ts
 type ModerationQueueItemVM = {
   reportId: string;
+  springId: string;
+  springSlug: string;
   springTitle: string;
+  regionLabel: string | null;
   submittedAt: string;
   observedAt: string;
-  reporterLabel: string;
-  reporterTrustLabel: string;
-  proposedWaterState: 'water' | 'no_water' | 'unknown';
+  reporterRoleSnapshot: 'user' | 'trusted_contributor' | 'moderator' | 'admin' | null;
+  waterState: 'water' | 'no_water' | 'unknown';
   photoCount: number;
-  notePreview: string | null;
+  note: string | null;
+};
+```
+
+### `ModerationReviewVM`
+
+```ts
+type ModerationReviewVM = {
+  reportId: string;
+  springId: string;
+  springSlug: string;
+  springTitle: string;
+  regionLabel: string | null;
+  accessNotes: string | null;
+  description: string | null;
+  submittedAt: string;
+  observedAt: string;
+  reporterRoleSnapshot: 'user' | 'trusted_contributor' | 'moderator' | 'admin' | null;
+  waterState: 'water' | 'no_water' | 'unknown';
+  note: string | null;
+  photoCount: number;
+  media: Array<{
+    id: string;
+    storageBucket: string;
+    storagePath: string;
+    previewUrl: string | null;
+    capturedAt: string | null;
+  }>;
 };
 ```
 
@@ -270,13 +302,14 @@ Shipped form/media primitives remain presentational only. They must not gain dir
   - approved/public-safe gallery items
   - approved/public-safe history summary rows
   - external navigation buttons that emit app ids through callbacks
+  - an authenticated report-entry button that routes into the Phase 8 report compose flow
 - The dedicated Phase 7 detail route must not show:
-  - raw report notes
+  - raw unapproved report notes
   - reviewer identity
   - trust labels
   - audit metadata
-  - write/edit/report buttons
-- The route must consume `packages/map-core` only, not direct provider SDK imports.
+  - moderation controls
+- The route must consume `packages/navigation-core` and other abstractions only, not direct provider SDK imports.
 - Clustering is intentionally not enabled in Phase 6.
 
 ## State Ownership Rules
@@ -286,7 +319,7 @@ Shipped form/media primitives remain presentational only. They must not gain dir
 - Form drafts belong to feature-local state or draft abstractions, not global domain stores.
 - Status derivation and role/trust calculations belong in the domain/application layer, not UI stores.
 
-## Phase 8 Write-Flow Notes
+## Phase 8 And Phase 9 Write-Flow Notes
 
 - The development session switcher is development-only and env-gated.
 - The admin create screen may use:
@@ -312,6 +345,28 @@ Shipped form/media primitives remain presentational only. They must not gain dir
   - expose raw moderation state
   - publish report content immediately
   - call storage providers directly from the presenter
+- The moderation queue screen may use:
+  - pending-only staff review items
+  - spring title/region
+  - submitted/observed timestamps
+  - water state
+  - note text
+  - reporter role snapshot
+  - photo count
+- The moderation queue screen must not:
+  - expose audit rows directly
+  - expose trust calculations
+  - expose public detail data as if it were moderation state
+- The moderation review screen may use:
+  - one pending report aggregate
+  - private preview URLs created through `packages/upload-core`
+  - approve/reject actions through callbacks and flow services
+  - rejection reason selection plus optional staff note
+- The moderation review screen must not:
+  - call storage providers directly
+  - call Supabase RPCs directly from the presenter
+  - expose audit metadata in the presenter
+  - expose pending/rejected content in public-facing routes
 
 ## UI-Only Agent Permissions
 
@@ -325,7 +380,7 @@ UI-focused agents may:
 
 UI-focused agents must not, without updating contracts first:
 
-- change the shape or meaning of `SpringSummaryVM`, `SpringDetailVM`, `ReportDraftVM`, or moderation view models
+- change the shape or meaning of `SpringSummaryVM`, `SpringDetailVM`, `ReportDraftVM`, `ModerationQueueItemVM`, or `ModerationReviewVM`
 - add direct backend logic to presenters
 - compute spring status in components
 - bypass navigation, upload, or repository abstractions

@@ -16,7 +16,7 @@ export type MobileAppEnv = {
   devSessionEnabled: boolean;
   devUserEmail: string | null;
   devUserPassword: string | null;
-  supabaseAnonKey: string | null;
+  supabasePublicKey: string | null;
   supabaseUrl: string | null;
 };
 
@@ -26,9 +26,11 @@ export const mobileAppEnv: MobileAppEnv = {
   devSessionEnabled: readPublicEnv('EXPO_PUBLIC_DEV_SESSION_ENABLED') === 'true',
   devUserEmail: readPublicEnv('EXPO_PUBLIC_DEV_USER_EMAIL'),
   devUserPassword: readPublicEnv('EXPO_PUBLIC_DEV_USER_PASSWORD'),
-  supabaseAnonKey: readPublicEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
+  supabasePublicKey:
+    readPublicEnv('EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY') ??
+    readPublicEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
   supabaseUrl: readPublicEnv('EXPO_PUBLIC_SUPABASE_URL'),
 };
 
 export const hasSupabasePublicConfig = () =>
-  Boolean(mobileAppEnv.supabaseUrl && mobileAppEnv.supabaseAnonKey);
+  Boolean(mobileAppEnv.supabaseUrl && mobileAppEnv.supabasePublicKey);

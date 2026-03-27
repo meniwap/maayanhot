@@ -1,10 +1,15 @@
 node_modules
 .expo
+apps/mobile/.expo
+apps/mobile/ios
+apps/mobile/android
 .next
 coverage
 dist
 .DS_Store
 pnpm-debug.log*
+supabase/.branches
+supabase/.temp
 .env
 .env.*
 !.env.example

@@ -1,4 +1,9 @@
-import { canCreateSpring, canModerateReports, type UserProfile } from '@maayanhot/domain';
+import {
+  canCreateSpring,
+  canModerateReports,
+  canSubmitReports,
+  type UserProfile,
+} from '@maayanhot/domain';
 import { describe, expect, it } from 'vitest';
 
 const makeProfile = (overrides: Partial<UserProfile> & Pick<UserProfile, 'id'>): UserProfile => ({
@@ -29,6 +34,13 @@ describe('domain permission guards', () => {
     expect(canModerateReports('moderator')).toBe(true);
     expect(canModerateReports('admin')).toBe(true);
     expect(canModerateReports('trusted_contributor')).toBe(false);
+  });
+
+  it('keeps trusted contributors on the same submit boundary as regular users', () => {
+    expect(canSubmitReports('user')).toBe(true);
+    expect(canSubmitReports('trusted_contributor')).toBe(true);
+    expect(canSubmitReports('moderator')).toBe(true);
+    expect(canSubmitReports('admin')).toBe(true);
   });
 
   it('respects the full role set on a user profile', () => {

@@ -23,6 +23,11 @@ export type BoundingBox = {
 export type UserRole = 'user' | 'trusted_contributor' | 'moderator' | 'admin';
 export type ReportModerationStatus = 'pending' | 'approved' | 'rejected';
 export type ModerationDecision = 'approve' | 'reject';
+export type ModerationReasonCode =
+  | 'insufficient_evidence'
+  | 'duplicate_submission'
+  | 'abusive_or_invalid'
+  | 'other';
 export type WaterPresence = 'water' | 'no_water' | 'unknown';
 export type ProjectionFreshness = 'recent' | 'stale' | 'none';
 export type ProjectionConfidence = 'low' | 'medium' | 'high';
@@ -110,9 +115,44 @@ export type ModerationActionRecord = {
   reportId: ReportId;
   actorUserId: UserId;
   decision: ModerationDecision;
-  reasonCode: string | null;
+  reasonCode: ModerationReasonCode | null;
   reasonNote: string | null;
   actedAt: IsoTimestampString;
+};
+
+export type ModerationQueueItemRecord = {
+  reportId: ReportId;
+  springId: SpringId;
+  springSlug: string;
+  springTitle: string;
+  regionCode: string | null;
+  observedAt: IsoTimestampString;
+  submittedAt: IsoTimestampString;
+  waterPresence: WaterPresence;
+  note: string | null;
+  reporterRoleSnapshot: UserRole | null;
+  photoCount: number;
+};
+
+export type ModerationReviewRecord = ModerationQueueItemRecord & {
+  accessNotes: string | null;
+  description: string | null;
+};
+
+export type ModerationReviewMediaRecord = {
+  id: MediaId;
+  springId: SpringId;
+  reportId: ReportId;
+  storageBucket: string;
+  storagePath: string;
+  mediaType: UploadAssetKind;
+  width: number | null;
+  height: number | null;
+  byteSize: number | null;
+  capturedAt: IsoTimestampString | null;
+  createdAt: IsoTimestampString;
+  sortOrder: number;
+  uploadState: UploadLifecycleState;
 };
 
 export type SpringStatusProjectionRecord = {
@@ -175,7 +215,7 @@ export type SubmitSpringReportCommand = {
 export type ModerateReportCommand = {
   reportId: ReportId;
   decision: ModerationDecision;
-  reasonCode?: string | null;
+  reasonCode?: ModerationReasonCode | null;
   reasonNote?: string | null;
 };
 
@@ -205,6 +245,13 @@ const springSlugSchema = z
   .trim()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
+export const moderationReasonCodeSchema = z.enum([
+  'insufficient_evidence',
+  'duplicate_submission',
+  'abusive_or_invalid',
+  'other',
+]);
+
 export const createSpringCommandSchema = z.object({
   accessNotes: z.string().trim().max(500).nullable().optional(),
   alternateNames: z.array(z.string().trim().min(1).max(120)).max(12),
@@ -224,3 +271,28 @@ export const submitSpringReportCommandSchema = z.object({
   springId: z.string().trim().min(1),
   waterPresence: z.enum(['water', 'no_water', 'unknown']),
 });
+
+export const moderateReportCommandSchema = z
+  .object({
+    decision: z.enum(['approve', 'reject']),
+    reasonCode: moderationReasonCodeSchema.nullable().optional(),
+    reasonNote: z.string().trim().max(1000).nullable().optional(),
+    reportId: z.string().trim().min(1),
+  })
+  .superRefine((value, ctx) => {
+    if (value.decision === 'reject' && !value.reasonCode) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A rejection reason code is required when rejecting a report.',
+        path: ['reasonCode'],
+      });
+    }
+
+    if (value.decision === 'approve' && value.reasonCode) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Approve actions must not include a rejection reason code.',
+        path: ['reasonCode'],
+      });
+    }
+  });

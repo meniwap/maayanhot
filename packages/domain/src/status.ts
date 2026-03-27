@@ -12,11 +12,14 @@ import type {
 import type { SpringMedia, SpringReport, SpringStatusProjection } from './entities';
 
 export type StatusDerivationPolicy = {
+  corroborationBonus: number;
+  decisiveScoreFloor: number;
   recentThresholdHours: number;
   staleThresholdHours: number;
   maxReportsConsidered: number;
   uncertaintyMargin: number;
   preciseLocationThresholdMeters: number;
+  unknownWeightMultiplier: number;
   roleWeights: Record<UserRole, number>;
   evidenceBonuses: {
     media: number;
@@ -39,13 +42,17 @@ export type StatusDerivationInput = {
 };
 
 type Scoreboard = Record<WaterPresence, number>;
+type ReportCounts = Record<WaterPresence, number>;
 
 export const defaultStatusDerivationPolicy = {
+  corroborationBonus: 0.3,
+  decisiveScoreFloor: 0.75,
   recentThresholdHours: 72,
   staleThresholdHours: 336,
   maxReportsConsidered: 12,
   uncertaintyMargin: 0.25,
   preciseLocationThresholdMeters: 150,
+  unknownWeightMultiplier: 0.55,
   roleWeights: {
     user: 1,
     trusted_contributor: 1.35,
@@ -145,6 +152,20 @@ const getConfidence = (
   return 'low';
 };
 
+export const shouldReplaceSpringStatusProjection = (
+  currentProjection: SpringStatusProjection | null,
+  nextProjection: SpringStatusProjection,
+) => {
+  if (!currentProjection) {
+    return true;
+  }
+
+  return (
+    new Date(nextProjection.recalculatedAt).getTime() >=
+    new Date(currentProjection.recalculatedAt).getTime()
+  );
+};
+
 export const filterApprovedReportsForPublicStatus = (reports: SpringReport[]) =>
   reports
     .filter((report) => report.moderationStatus === 'approved')
@@ -182,6 +203,11 @@ export const deriveSpringStatusProjection = ({
     no_water: 0,
     unknown: 0,
   };
+  const reportCounts: ReportCounts = {
+    water: 0,
+    no_water: 0,
+    unknown: 0,
+  };
 
   for (const report of consideredReports) {
     const ageHours = Math.max(0, nowDate.getTime() - new Date(report.observedAt).getTime()) / 36e5;
@@ -192,7 +218,16 @@ export const deriveSpringStatusProjection = ({
       getEvidenceMultiplier(report, mediaByReportId, policy);
 
     scoreboard[report.waterPresence] += weightedScore;
+    reportCounts[report.waterPresence] += 1;
   }
+
+  for (const state of ['water', 'no_water'] as const) {
+    if (reportCounts[state] > 1) {
+      scoreboard[state] += (reportCounts[state] - 1) * policy.corroborationBonus;
+    }
+  }
+
+  scoreboard.unknown *= policy.unknownWeightMultiplier;
 
   const rankedStates = (Object.entries(scoreboard) as Array<[WaterPresence, number]>).sort(
     (left, right) => right[1] - left[1],
@@ -202,8 +237,9 @@ export const deriveSpringStatusProjection = ({
   const [, runnerUpScore = 0] = rankedStates[1] ?? [];
   const latestApprovedReportAt = consideredReports[0]?.observedAt ?? null;
   const freshness = getFreshness(latestApprovedReportAt, nowDate, policy);
+  const decisiveState = topState !== 'unknown' && topScore >= policy.decisiveScoreFloor;
   const waterPresence =
-    topScore <= 0 || Math.abs(scoreboard.water - scoreboard.no_water) <= policy.uncertaintyMargin
+    !decisiveState || Math.abs(scoreboard.water - scoreboard.no_water) <= policy.uncertaintyMargin
       ? 'unknown'
       : topState;
   const confidence = getConfidence(topScore, runnerUpScore, policy);

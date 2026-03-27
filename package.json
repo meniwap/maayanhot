@@ -11,6 +11,10 @@
     "node": "24.14.1"
   },
   "scripts": {
+    "db:local:start": "pnpm exec supabase start",
+    "db:local:stop": "pnpm exec supabase stop",
+    "db:local:reset": "pnpm exec supabase db reset --local",
+    "db:test:local": "pnpm exec supabase test db --local",
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
@@ -31,6 +35,7 @@
     "react": "19.2.0",
     "react-native": "0.83.0",
     "react-test-renderer": "19.2.0",
+    "supabase": "2.84.2",
     "typescript": "5.9.3",
     "typescript-eslint": "8.57.2",
     "vitest": "4.0.16"

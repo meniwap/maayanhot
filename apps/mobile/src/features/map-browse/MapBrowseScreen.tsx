@@ -3,6 +3,7 @@ import {
   type MapSelectionChange,
   type MapSurfacePalette,
 } from '@maayanhot/map-core';
+import { canModerateReports } from '@maayanhot/domain';
 import { useQuery } from '@tanstack/react-query';
 import { AppText, Button, Card, Inline, Stack, useTokens } from '@maayanhot/ui';
 import { useRouter } from 'expo-router';
@@ -51,6 +52,12 @@ export function MapBrowseScreen() {
       pathname: '/springs/[springId]',
     });
   };
+  const canOpenModerationQueue =
+    snapshot.primaryRole !== null &&
+    canModerateReports({
+      primaryRole: snapshot.primaryRole,
+      roleSet: snapshot.roleSet,
+    });
 
   const topCardCopy = !snapshot.isConfigured
     ? 'חסרים משתני Supabase ציבוריים ולכן הקטלוג עדיין לא נטען.'
@@ -105,6 +112,14 @@ export function MapBrowseScreen() {
                 testID="open-dev-session"
                 variant="secondary"
               />
+              {canOpenModerationQueue ? (
+                <Button
+                  label="תור מודרציה"
+                  onPress={() => router.push('/moderation/queue')}
+                  testID="open-moderation-queue"
+                  variant="secondary"
+                />
+              ) : null}
               {snapshot.primaryRole === 'admin' ? (
                 <Button
                   label="מעיין חדש"

@@ -1,11 +1,20 @@
+import { canModerateReports } from '@maayanhot/domain';
+import { useRouter } from 'expo-router';
 import { AppText, Button, Card, Screen, Stack } from '@maayanhot/ui';
 import React, { useState } from 'react';
 
 import { useDevSession } from './DevSessionProvider';
 
 export function DevSessionScreen() {
+  const router = useRouter();
   const { signInAsDemoAdmin, signInAsDemoUser, signOut, snapshot } = useDevSession();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const canOpenModerationQueue =
+    snapshot.primaryRole !== null &&
+    canModerateReports({
+      primaryRole: snapshot.primaryRole,
+      roleSet: snapshot.roleSet,
+    });
 
   const withErrorBoundary = async (action: () => Promise<void>) => {
     try {
@@ -36,7 +45,8 @@ export function DevSessionScreen() {
           </AppText>
           {!snapshot.isConfigured ? (
             <AppText tone="secondary" variant="bodySm">
-              חסרים משתני Supabase ציבוריים. יש לעדכן את סביבת Expo המקומית לפני ניסיון כניסה.
+              חסרים Supabase URL או publishable key. יש לעדכן את סביבת Expo המקומית לפני ניסיון
+              כניסה.
             </AppText>
           ) : null}
           {errorMessage ? (
@@ -68,6 +78,15 @@ export function DevSessionScreen() {
               testID="dev-session-sign-out"
               variant="ghost"
             />
+            {canOpenModerationQueue ? (
+              <Button
+                label="פתח תור מודרציה"
+                onPress={() => router.push('/moderation/queue')}
+                stretch
+                testID="dev-session-open-moderation-queue"
+                variant="secondary"
+              />
+            ) : null}
           </Stack>
         </Stack>
       </Card>

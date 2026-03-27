@@ -1,6 +1,10 @@
 export type {
   AuditEntry,
   ModerationAction,
+  ModerationQueueItem,
+  ModerationReview,
+  ModerationReviewAggregate,
+  ModerationReviewMedia,
   Spring,
   SpringLocation,
   SpringMedia,
@@ -20,6 +24,7 @@ export type {
   SpringReportRepository,
   SpringRepository,
   SpringStatusProjectionRepository,
+  UpsertSpringStatusProjectionCommand,
   UserProfileRepository,
 } from './repositories';
 export {
@@ -31,5 +36,16 @@ export {
   defaultStatusDerivationPolicy,
   deriveSpringStatusProjection,
   filterApprovedReportsForPublicStatus,
+  shouldReplaceSpringStatusProjection,
 } from './status';
 export type { StatusDerivationInput, StatusDerivationPolicy } from './status';
+export {
+  defaultTrustedContributorProgressionPolicy,
+  evaluateTrustedContributorProgression,
+} from './trust';
+export type {
+  TrustedContributorProgressionDecision,
+  TrustedContributorProgressionEvaluation,
+  TrustedContributorProgressionPolicy,
+  TrustedContributorProgressionReason,
+} from './trust';

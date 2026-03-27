@@ -6,11 +6,11 @@ let supabaseClient: SupabaseClient | null = null;
 
 export const getSupabaseClient = () => {
   if (!hasSupabasePublicConfig()) {
-    throw new Error('Supabase public environment variables are not configured.');
+    throw new Error('Supabase public URL/key environment variables are not configured.');
   }
 
   if (!supabaseClient) {
-    supabaseClient = createClient(mobileAppEnv.supabaseUrl!, mobileAppEnv.supabaseAnonKey!, {
+    supabaseClient = createClient(mobileAppEnv.supabaseUrl!, mobileAppEnv.supabasePublicKey!, {
       auth: {
         autoRefreshToken: false,
         detectSessionInUrl: false,

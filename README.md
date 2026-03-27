@@ -4,7 +4,7 @@ Production-oriented mobile-first product baseline for discovering, reporting on,
 
 ## Current Status
 
-Phase 8 is complete.
+Phase 9 is complete, and the pre-Phase-10 tooling-enablements are complete.
 
 - The monorepo/tooling scaffold exists.
 - The UI foundation exists as a token-driven shell and shared presentational primitives.
@@ -15,7 +15,9 @@ Phase 8 is complete.
 - The mobile app now has a dedicated read-only spring-detail flow behind the Phase 6 teaser.
 - The real remote Supabase project `maayanhot` has been created and linked locally.
 - The mobile app now has repository-backed public-safe reads, a development-only session switcher, an admin create-spring flow, a user report flow, and the first upload pipeline baseline.
-- Phase 9 is not started and requires explicit authorization.
+- The local Supabase DB start/reset/test path now runs on this Mac through the pinned local CLI plus Docker Desktop.
+- The local Maestro iOS smoke path now runs on this Mac against the real native bundle id `com.meniwap.maayanhot`.
+- Phase 10 is not started and requires explicit authorization.
 
 ## Product Intent
 
@@ -198,6 +200,37 @@ Native note:
 
 - MapLibre requires a development build/native runtime and is not an Expo Go feature
 
+## Local Tooling
+
+Local Supabase DB path:
+
+- `pnpm db:local:start`
+- `pnpm db:local:reset`
+- `pnpm db:test:local`
+- `pnpm db:local:stop`
+
+Local Maestro smoke path:
+
+1. Boot an iOS simulator, for example `iPhone 17`.
+2. Build and install the native app:
+
+```bash
+cd /Users/meniwap/mayyanhot/apps/mobile
+npx expo run:ios --device "iPhone 17"
+```
+
+3. Run the smoke flow from the repo root:
+
+```bash
+maestro --device 93441B3A-3AE2-4F4B-988E-70156F016902 test /Users/meniwap/mayyanhot/.maestro/smoke-dev-session.yaml
+```
+
+Local tooling assumptions:
+
+- Docker Desktop is the repo-standard local container runtime on this Mac.
+- The native technical app identifier is `com.meniwap.maayanhot`.
+- Generated native output under `apps/mobile/ios` is treated as a local tooling artifact and is ignored from source-control and formatting checks.
+
 ## Tooling Baseline
 
 - Package manager: `pnpm`
@@ -243,7 +276,7 @@ Every agent must read these files before editing code or contracts:
 
 ## Phase Boundary
 
-No Phase 9 work has started.
+No Phase 10 work has started.
 
 Still out of scope at the current state:
 

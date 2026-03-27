@@ -1,0 +1,41 @@
+appId: com.meniwap.maayanhot
+---
+# Required env before running:
+# - MAESTRO_PUBLISHED_SPRING_ID: a published spring id that is visible in the public catalog
+# - MAESTRO_PUBLISHED_SPRING_TITLE: the visible title of that spring
+# - MAESTRO_EXPECTED_PUBLIC_STATUS_AFTER: the post-approval status label expected on the detail screen
+#
+# This flow assumes the Phase 8 demo accounts are configured in the linked `maayanhot` project
+# and that the first demo admin bootstrap SQL has already been applied.
+
+- launchApp
+- tapOn:
+    id: open-dev-session
+- tapOn:
+    id: dev-session-sign-in-user
+- back
+- openLink: springs-israel://springs/${MAESTRO_PUBLISHED_SPRING_ID}
+- tapOn:
+    id: spring-detail-open-report
+- tapOn:
+    id: report-submit
+- assertVisible:
+    id: spring-detail-feedback
+- openLink: springs-israel://dev/session
+- tapOn:
+    id: dev-session-sign-out
+- tapOn:
+    id: dev-session-sign-in-admin
+- tapOn:
+    id: dev-session-open-moderation-queue
+- assertVisible:
+    text: ${MAESTRO_PUBLISHED_SPRING_TITLE}
+- tapOn:
+    text: לבדיקה
+- tapOn:
+    id: moderation-review-approve
+- assertVisible:
+    id: moderation-queue-feedback
+- openLink: springs-israel://springs/${MAESTRO_PUBLISHED_SPRING_ID}
+- assertVisible:
+    text: ${MAESTRO_EXPECTED_PUBLIC_STATUS_AFTER}

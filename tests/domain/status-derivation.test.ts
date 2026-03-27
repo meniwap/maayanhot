@@ -1,5 +1,6 @@
 import type { ReportId } from '@maayanhot/contracts';
 import {
+  defaultStatusDerivationPolicy,
   deriveSpringStatusProjection,
   filterApprovedReportsForPublicStatus,
   type SpringMedia,
@@ -175,5 +176,141 @@ describe('status derivation', () => {
     ]);
 
     expect(approved.map((report) => report.id)).toEqual(['report-b', 'report-a']);
+  });
+
+  it('includes a previously pending report once it becomes approved', () => {
+    const pendingReport = makeReport({
+      id: 'report-pending-to-approve',
+      moderationStatus: 'pending',
+      observedAt: '2026-03-26T10:00:00.000Z',
+      waterPresence: 'water',
+    });
+
+    const beforeApproval = deriveSpringStatusProjection({
+      now,
+      reports: [pendingReport],
+      springId,
+    });
+    const afterApproval = deriveSpringStatusProjection({
+      now,
+      reports: [
+        {
+          ...pendingReport,
+          moderationStatus: 'approved',
+        },
+      ],
+      springId,
+    });
+
+    expect(beforeApproval.derivedFromReportIds).toEqual([]);
+    expect(afterApproval.derivedFromReportIds).toEqual(['report-pending-to-approve']);
+    expect(afterApproval.waterPresence).toBe('water');
+  });
+
+  it('keeps rejected reports out of the derived projection', () => {
+    const approvedBaseline = makeReport({
+      id: 'report-approved-baseline',
+      observedAt: '2026-03-25T09:00:00.000Z',
+      waterPresence: 'water',
+    });
+    const rejectedCandidate = makeReport({
+      id: 'report-rejected-candidate',
+      moderationStatus: 'rejected',
+      observedAt: '2026-03-26T10:00:00.000Z',
+      waterPresence: 'no_water',
+    });
+
+    const projection = deriveSpringStatusProjection({
+      now,
+      reports: [approvedBaseline, rejectedCandidate],
+      springId,
+    });
+
+    expect(projection.derivedFromReportIds).toEqual(['report-approved-baseline']);
+    expect(projection.waterPresence).toBe('water');
+  });
+
+  it('downweights unknown evidence so it does not overtake stronger definitive evidence by default', () => {
+    const projection = deriveSpringStatusProjection({
+      now,
+      reports: [
+        makeReport({
+          id: 'report-unknown-with-media',
+          note: 'קשה לראות, אבל אולי אין זרימה.',
+          waterPresence: 'unknown',
+        }),
+        makeReport({
+          id: 'report-definitive-water',
+          note: null,
+          waterPresence: 'water',
+        }),
+      ],
+      mediaByReportId: {
+        'report-unknown-with-media': [makeMedia('report-unknown-with-media')],
+      },
+      springId,
+    });
+
+    expect(projection.waterPresence).toBe('water');
+  });
+
+  it('uses corroboration bonuses to break otherwise narrow multi-report ties', () => {
+    const reports = [
+      makeReport({
+        id: 'report-water-a',
+        observedAt: '2026-03-14T05:00:00.000Z',
+        waterPresence: 'water',
+      }),
+      makeReport({
+        id: 'report-water-b',
+        observedAt: '2026-03-14T05:00:00.000Z',
+        waterPresence: 'water',
+      }),
+      makeReport({
+        id: 'report-dry-recent',
+        note: 'הבריכה ריקה כרגע',
+        observedAt: '2026-03-26T08:00:00.000Z',
+        waterPresence: 'no_water',
+      }),
+    ] satisfies SpringReport[];
+    const withoutCorroboration = deriveSpringStatusProjection({
+      now,
+      policy: {
+        ...defaultStatusDerivationPolicy,
+        corroborationBonus: 0,
+        uncertaintyMargin: 0.05,
+      },
+      reports,
+      springId,
+    });
+    const withCorroboration = deriveSpringStatusProjection({
+      now,
+      policy: {
+        ...defaultStatusDerivationPolicy,
+        uncertaintyMargin: 0.05,
+      },
+      reports,
+      springId,
+    });
+
+    expect(withoutCorroboration.waterPresence).toBe('no_water');
+    expect(withCorroboration.waterPresence).toBe('water');
+  });
+
+  it('treats very stale weak evidence as unknown instead of a definitive public state', () => {
+    const projection = deriveSpringStatusProjection({
+      now,
+      reports: [
+        makeReport({
+          id: 'report-very-stale',
+          observedAt: '2026-03-08T08:00:00.000Z',
+          waterPresence: 'water',
+        }),
+      ],
+      springId,
+    });
+
+    expect(projection.freshness).toBe('stale');
+    expect(projection.waterPresence).toBe('unknown');
   });
 });

@@ -1,0 +1,9 @@
+appId: com.meniwap.maayanhot
+---
+- launchApp
+- assertVisible:
+    id: map-browse-screen
+- tapOn:
+    id: open-dev-session
+- assertVisible:
+    id: dev-session-screen
