@@ -5,16 +5,27 @@ import {
 } from '@maayanhot/map-core';
 import { canModerateReports } from '@maayanhot/domain';
 import { useQuery } from '@tanstack/react-query';
-import { AppText, Button, Card, Inline, Stack, useTokens } from '@maayanhot/ui';
+import { Button, Card, Screen, Stack, useTokens, AppText } from '@maayanhot/ui';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useDevSession } from '../dev-session/DevSessionProvider';
 import { useOfflineReportQueue } from '../../infrastructure/offline/OfflineReportQueueProvider';
 import { publicSpringReadRepository } from '../../infrastructure/supabase/repositories/public-spring-read-repository';
-import { SelectedSpringTeaser } from './SelectedSpringTeaser';
+import {
+  defaultSpringDiscoveryState,
+  applySpringCatalogDiscovery,
+  hasActiveDiscoveryRefinements,
+  type DiscoveryFreshnessFilter,
+  type DiscoverySortMode,
+  type DiscoveryViewMode,
+  type DiscoveryWaterFilter,
+} from './discovery';
+import { DiscoveryControls } from './DiscoveryControls';
 import { initialIsraelViewport } from './public-spring-catalog';
+import { SelectedSpringTeaser } from './SelectedSpringTeaser';
+import { DiscoveryEmptyState, SpringDiscoveryList } from './SpringDiscoveryList';
 import { toMarkerDescriptor, toSpringSummaryVM } from './spring-summary-vm';
 
 export function MapBrowseScreen() {
@@ -22,16 +33,35 @@ export function MapBrowseScreen() {
   const router = useRouter();
   const { snapshot } = useDevSession();
   const offlineQueue = useOfflineReportQueue();
-  const [selectedSpringId, setSelectedSpringId] = useState<string | null>(null);
+  const [discoveryState, setDiscoveryState] = useState(defaultSpringDiscoveryState);
   const MapSurface = mapLibreAdapter.Surface;
   const catalogQuery = useQuery({
     enabled: snapshot.isConfigured,
     queryFn: () => publicSpringReadRepository.getCatalog(),
     queryKey: ['public-spring-catalog'],
   });
-  const springs = (catalogQuery.data ?? []).map(toSpringSummaryVM);
-  const selectedSpring = springs.find((spring) => spring.id === selectedSpringId) ?? null;
-  const markers = springs.map((spring) => toMarkerDescriptor(spring, selectedSpringId));
+
+  const catalogRows = catalogQuery.data ?? [];
+  const discoveredRows = applySpringCatalogDiscovery(catalogRows, discoveryState);
+  const springs = discoveredRows.map(toSpringSummaryVM);
+  const selectedSpring =
+    springs.find((spring) => spring.id === discoveryState.selectedSpringId) ?? null;
+  const markers = springs.map((spring) =>
+    toMarkerDescriptor(spring, discoveryState.selectedSpringId),
+  );
+
+  useEffect(() => {
+    if (
+      discoveryState.selectedSpringId &&
+      !discoveredRows.some((spring) => spring.id === discoveryState.selectedSpringId)
+    ) {
+      setDiscoveryState((current) => ({
+        ...current,
+        selectedSpringId: null,
+      }));
+    }
+  }, [discoveredRows, discoveryState.selectedSpringId]);
+
   const mapPalette: MapSurfacePalette = {
     markerSurface: tokens.bg.canvas,
     noWater: tokens.status.noWater.bg,
@@ -43,7 +73,10 @@ export function MapBrowseScreen() {
   };
 
   const handleSelectionChange = (change: MapSelectionChange) => {
-    setSelectedSpringId(change.springId);
+    setDiscoveryState((current) => ({
+      ...current,
+      selectedSpringId: change.springId,
+    }));
   };
 
   const handleOpenDetails = (springId: string) => {
@@ -54,6 +87,40 @@ export function MapBrowseScreen() {
       pathname: '/springs/[springId]',
     });
   };
+
+  const handleDiscoveryPatch = (
+    patch: Partial<
+      Pick<
+        typeof discoveryState,
+        | 'freshnessFilter'
+        | 'searchText'
+        | 'selectedSpringId'
+        | 'sortMode'
+        | 'viewMode'
+        | 'waterFilter'
+      >
+    >,
+  ) => {
+    setDiscoveryState((current) => ({
+      ...current,
+      ...patch,
+    }));
+  };
+
+  const handleShowOnMap = (springId: string) => {
+    handleDiscoveryPatch({
+      selectedSpringId: springId,
+      viewMode: 'map',
+    });
+  };
+
+  const handleResetDiscovery = () => {
+    setDiscoveryState((current) => ({
+      ...defaultSpringDiscoveryState,
+      viewMode: current.viewMode,
+    }));
+  };
+
   const canOpenModerationQueue =
     snapshot.primaryRole !== null &&
     canModerateReports({
@@ -67,11 +134,99 @@ export function MapBrowseScreen() {
       ? 'טוען את קטלוג המעיינות הציבורי מהפרויקט המקושר.'
       : catalogQuery.isError && !catalogQuery.data
         ? 'טעינת הקטלוג נכשלה. בסיס המפה מוכן, אבל הקריאה הציבורית דורשת בדיקת חיבור.'
-        : !offlineQueue.snapshot.isOnline && springs.length > 0
-          ? `מוצגים ${springs.length} מעיינות מהמטמון הציבורי המקומי. אריחי מפה מלאים דורשים חיבור.`
-          : springs.length === 0
+        : !offlineQueue.snapshot.isOnline && catalogRows.length > 0
+          ? `מוצגים ${catalogRows.length} מעיינות מהמטמון הציבורי המקומי. אריחי מפה מלאים דורשים חיבור.`
+          : catalogRows.length === 0
             ? 'עדיין אין מעיינות פומביים בקטלוג המקושר. מנהל יכול ליצור מעיין חדש מכאן.'
-            : `${springs.length} מעיינות פומביים נטענו מהקריאה המאושרת לציבור.`;
+            : `${catalogRows.length} מעיינות פומביים נטענו מהקריאה המאושרת לציבור.`;
+
+  const actionButtons = (
+    <>
+      <Button
+        label="סשן פיתוח"
+        onPress={() => router.push('/dev/session')}
+        testID="open-dev-session"
+        variant="secondary"
+      />
+      {canOpenModerationQueue ? (
+        <Button
+          label="תור מודרציה"
+          onPress={() => router.push('/moderation/queue')}
+          testID="open-moderation-queue"
+          variant="secondary"
+        />
+      ) : null}
+      {snapshot.primaryRole === 'admin' ? (
+        <Button
+          label="מעיין חדש"
+          onPress={() => router.push('/admin/springs/new')}
+          testID="open-admin-create-spring"
+        />
+      ) : null}
+    </>
+  );
+
+  const controls = (
+    <DiscoveryControls
+      actions={actionButtons}
+      bodyCopy={topCardCopy}
+      freshnessFilter={discoveryState.freshnessFilter}
+      onFreshnessFilterChange={(freshnessFilter: DiscoveryFreshnessFilter) =>
+        handleDiscoveryPatch({ freshnessFilter })
+      }
+      onReset={handleResetDiscovery}
+      onSearchTextChange={(searchText: string) => handleDiscoveryPatch({ searchText })}
+      onSortModeChange={(sortMode: DiscoverySortMode) => handleDiscoveryPatch({ sortMode })}
+      onViewModeChange={(viewMode: DiscoveryViewMode) => handleDiscoveryPatch({ viewMode })}
+      onWaterFilterChange={(waterFilter: DiscoveryWaterFilter) =>
+        handleDiscoveryPatch({ waterFilter })
+      }
+      resultCount={springs.length}
+      searchText={discoveryState.searchText}
+      showReset={hasActiveDiscoveryRefinements(discoveryState)}
+      sortMode={discoveryState.sortMode}
+      totalCount={catalogRows.length}
+      viewMode={discoveryState.viewMode}
+      waterFilter={discoveryState.waterFilter}
+    />
+  );
+
+  if (discoveryState.viewMode === 'list') {
+    return (
+      <Screen scrollable testID="map-browse-screen">
+        <Stack gap="4">
+          {controls}
+          {catalogQuery.isLoading && !catalogQuery.data ? (
+            <Card testID="discovery-loading-state" variant="raised">
+              <AppText variant="titleMd">טוען תוצאות גילוי</AppText>
+            </Card>
+          ) : catalogQuery.isError && !catalogQuery.data ? (
+            <Card testID="discovery-error-state" variant="raised">
+              <Stack gap="2">
+                <AppText variant="titleMd">אי אפשר לטעון תוצאות כרגע</AppText>
+                <AppText tone="secondary" variant="bodySm">
+                  קטלוג הגילוי נשען על הקריאה הציבורית שכבר קיימת. כדאי לבדוק חיבור או לנסות שוב
+                  כשהרשת חוזרת.
+                </AppText>
+              </Stack>
+            </Card>
+          ) : springs.length === 0 ? (
+            <DiscoveryEmptyState
+              onReset={handleResetDiscovery}
+              showReset={hasActiveDiscoveryRefinements(discoveryState)}
+            />
+          ) : (
+            <SpringDiscoveryList
+              onOpenDetails={handleOpenDetails}
+              onShowOnMap={handleShowOnMap}
+              selectedSpringId={discoveryState.selectedSpringId}
+              springs={springs}
+            />
+          )}
+        </Stack>
+      </Screen>
+    );
+  }
 
   return (
     <View
@@ -103,42 +258,12 @@ export function MapBrowseScreen() {
           },
         ]}
       >
-        <Card padding="3" style={styles.topCard} variant="raised">
-          <Stack gap="2">
-            <AppText variant="titleMd">מפת מעיינות</AppText>
-            <AppText tone="secondary" variant="bodySm">
-              {topCardCopy}
-            </AppText>
-            <Inline gap="2">
-              <Button
-                label="סשן פיתוח"
-                onPress={() => router.push('/dev/session')}
-                testID="open-dev-session"
-                variant="secondary"
-              />
-              {canOpenModerationQueue ? (
-                <Button
-                  label="תור מודרציה"
-                  onPress={() => router.push('/moderation/queue')}
-                  testID="open-moderation-queue"
-                  variant="secondary"
-                />
-              ) : null}
-              {snapshot.primaryRole === 'admin' ? (
-                <Button
-                  label="מעיין חדש"
-                  onPress={() => router.push('/admin/springs/new')}
-                  testID="open-admin-create-spring"
-                />
-              ) : null}
-            </Inline>
-          </Stack>
-        </Card>
+        {controls}
       </View>
 
       {selectedSpring ? (
         <SelectedSpringTeaser
-          onDismiss={() => setSelectedSpringId(null)}
+          onDismiss={() => handleDiscoveryPatch({ selectedSpringId: null })}
           onOpenDetails={() => handleOpenDetails(selectedSpring.id)}
           spring={selectedSpring}
           style={[
@@ -164,9 +289,6 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-  },
-  topCard: {
-    alignSelf: 'flex-start',
   },
   topOverlay: {
     left: 0,

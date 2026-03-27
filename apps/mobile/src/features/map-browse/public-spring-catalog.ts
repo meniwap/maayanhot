@@ -10,6 +10,7 @@ import type { MapViewport } from '@maayanhot/map-core';
 
 export type PublicSpringCatalogRow = {
   accessNotes: string | null;
+  alternateNames: string[];
   confidence: ProjectionConfidence;
   coordinates: GeoPoint;
   coverImageUrl: string | null;

@@ -317,6 +317,15 @@ This file records architecture and delivery decisions that materially affect fut
 - Alternatives considered: local-only dedupe; client-side retry with last-known ids but no DB constraints; a larger generalized sync engine.
 - Consequences: The replay path can safely retry the same logical report, repository/application layers stay in charge of delivery state, and canonical report/media history remains server-owned and constraint-backed.
 
+## ADR-0036: Phase 12 Discovery Stays Client-Side On The Existing Public Catalog
+
+- Status: Accepted
+- Date: 2026-03-27
+- Decision: Phase 12 implements search, filters, sorting, and map/list coordination entirely on top of the already loaded `public.public_spring_catalog` rows in the mobile app.
+- Why: The product needs better discovery now, but the authorized phase does not include widening public data exposure, adding a search RPC, or turning browse into a ranking system. The current public catalog already exposes enough safe metadata to support bounded discovery.
+- Alternatives considered: add a dedicated backend search surface now; keep discovery map-only; adopt a bottom-sheet or split-view coordination model instead of a simple toggle.
+- Consequences: Discovery stays coherent with the Phase 11 cached catalog path, map and list results cannot drift because they share one state object, and future server-backed ranking or viewport-query work remains an explicit later decision.
+
 ## Version Decision Summary
 
 - Node runtime baseline: 24.14.1.
@@ -346,6 +355,7 @@ This file records architecture and delivery decisions that materially affect fut
 - Phase 8 upload baseline: uploads are sequential, slot-based, and routed through `packages/upload-core` with a Supabase storage adapter.
 - Phase 11 offline-lite baseline: only previously loaded public-safe catalog/detail queries are persisted, and only user report submissions are queued locally.
 - Phase 11 replay baseline: reconnect replay is foreground-only, same-user scoped, and protected by server-side idempotency keys on reports and reserved media slots.
+- Phase 12 discovery baseline: search/filter/sort use only already loaded public catalog fields, and map/list coordination is a shared-state toggle rather than a separate list sync model.
 - Backend baseline: Supabase platform with CLI 2.84.2, PostgreSQL 17 compatibility, and PostGIS 3.6 compatibility.
 - Server-state baseline: TanStack Query 5.95.2.
 - Future admin-web baseline: Next.js 16.2.1, planned but not yet implemented.

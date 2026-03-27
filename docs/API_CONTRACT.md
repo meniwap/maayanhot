@@ -42,6 +42,12 @@ Phase 8 adds:
   - this layer may depend on concrete Supabase client/runtime packages
   - this layer must still satisfy `packages/domain` ports instead of bypassing them
 
+Phase 12 adds:
+
+- client-side discovery on top of the existing public browse surface
+  - search, filters, and sorting operate on already loaded `public.public_spring_catalog` rows only
+  - no new public search RPC, ranking endpoint, or widened browse contract is introduced
+
 ## Local Supabase Structure
 
 Phase 4 adds:
@@ -251,6 +257,16 @@ Phase 5 security rule:
 - raw projection rows are not public
 - the only anonymous/authenticated public-safe read surface is `public.public_spring_catalog`
 - that view exposes derived status fields but omits internal lineage fields such as `derived_from_report_ids`
+
+Phase 12 discovery rule:
+
+- mobile discovery now uses these public-safe browse fields only:
+  - `title`
+  - `alternate_names`
+  - `slug`
+  - `region_code` / mapped region label
+  - derived status fields already exposed by `public.public_spring_catalog`
+- `description`, raw reports, moderation state, trust signals, and audit data remain out of the search/filter path
 
 Phase 10 projection hardening rule:
 

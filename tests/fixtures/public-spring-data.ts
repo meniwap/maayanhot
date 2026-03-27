@@ -4,6 +4,7 @@ import type { PublicSpringDetailRow } from '../../apps/mobile/src/features/sprin
 export const publicSpringCatalogFixture: PublicSpringCatalogRow[] = [
   {
     accessNotes: 'הליכה קצרה בשביל מוצל',
+    alternateNames: ['Ein Haniya'],
     confidence: 'high',
     coordinates: {
       latitude: 31.7454,
@@ -23,6 +24,7 @@ export const publicSpringCatalogFixture: PublicSpringCatalogRow[] = [
   },
   {
     accessNotes: 'ירידה תלולה יחסית בערוץ',
+    alternateNames: ['Ein Prat', 'עין פרת'],
     confidence: 'medium',
     coordinates: {
       latitude: 31.8515,
@@ -42,6 +44,7 @@ export const publicSpringCatalogFixture: PublicSpringCatalogRow[] = [
   },
   {
     accessNotes: 'גישה ברכב ולאחר מכן הליכה קצרה',
+    alternateNames: ['Ein Tina'],
     confidence: 'high',
     coordinates: {
       latitude: 33.0414,
@@ -61,6 +64,7 @@ export const publicSpringCatalogFixture: PublicSpringCatalogRow[] = [
   },
   {
     accessNotes: 'מסלול מדברי ארוך יותר, ללא קליטה יציבה',
+    alternateNames: ['Ein Akev'],
     confidence: 'low',
     coordinates: {
       latitude: 30.8253,
@@ -83,7 +87,6 @@ export const publicSpringCatalogFixture: PublicSpringCatalogRow[] = [
 export const publicSpringDetailFixture: PublicSpringDetailRow[] = [
   {
     ...publicSpringCatalogFixture[0]!,
-    alternateNames: ['Ein Haniya'],
     gallery: [
       {
         alt: 'בריכת אבן עם מים צלולים',
@@ -116,7 +119,6 @@ export const publicSpringDetailFixture: PublicSpringDetailRow[] = [
   },
   {
     ...publicSpringCatalogFixture[1]!,
-    alternateNames: ['Ein Prat'],
     gallery: [
       {
         alt: 'בריכה ריקה יחסית לצד קיר סלע',

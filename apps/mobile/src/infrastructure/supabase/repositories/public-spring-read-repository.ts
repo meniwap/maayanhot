@@ -14,6 +14,7 @@ import { getSupabaseClient } from '../client';
 
 type CatalogRowRecord = {
   access_notes: string | null;
+  alternate_names: string[];
   confidence: ProjectionConfidence;
   description: string | null;
   freshness: ProjectionFreshness;
@@ -52,6 +53,7 @@ const toRegionLabel = (regionCode: string | null) => regionCode;
 
 const toCatalogRow = (row: CatalogRowRecord): PublicSpringCatalogRow => ({
   accessNotes: row.access_notes,
+  alternateNames: row.alternate_names,
   confidence: row.confidence,
   coordinates: {
     latitude: row.latitude,

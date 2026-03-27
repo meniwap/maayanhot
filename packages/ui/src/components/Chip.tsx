@@ -1,17 +1,26 @@
 import type { PropsWithChildren } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTokens } from '../theme-context';
 import { AppText } from './AppText';
 
 export type ChipProps = PropsWithChildren<{
+  disabled?: boolean;
   label: string;
+  onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   variant?: 'filter' | 'selected' | 'status';
 }>;
 
-export function Chip({ label, style, testID, variant = 'filter' }: ChipProps) {
+export function Chip({
+  disabled = false,
+  label,
+  onPress,
+  style,
+  testID,
+  variant = 'filter',
+}: ChipProps) {
   const tokens = useTokens();
 
   const palette =
@@ -29,7 +38,7 @@ export function Chip({ label, style, testID, variant = 'filter' }: ChipProps) {
             fg: tokens.text.secondary,
           };
 
-  return (
+  const content = (
     <View
       style={[
         {
@@ -45,7 +54,7 @@ export function Chip({ label, style, testID, variant = 'filter' }: ChipProps) {
         },
         style,
       ]}
-      testID={testID}
+      {...(!onPress && testID ? { testID } : {})}
     >
       <AppText
         align="center"
@@ -57,5 +66,22 @@ export function Chip({ label, style, testID, variant = 'filter' }: ChipProps) {
         {label}
       </AppText>
     </View>
+  );
+
+  if (!onPress) {
+    return content;
+  }
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={{ opacity: disabled ? 0.6 : 1 }}
+      testID={testID}
+    >
+      {content}
+    </Pressable>
   );
 }

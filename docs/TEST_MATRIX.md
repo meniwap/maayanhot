@@ -9,7 +9,7 @@
 
 ## Current Status
 
-Phase 11 adds bounded offline-lite coverage for persisted public reads, queued report replay, reconnect/backoff behavior, and idempotent DB guardrails on top of the earlier moderation and tooling baselines.
+Phase 12 adds bounded discovery coverage for client-side search, filters, lightweight sorting, and shared map/list coordination on top of the persisted public catalog path from Phase 11.
 
 ## Inventory By Category
 
@@ -75,8 +75,9 @@ Phase 11 adds bounded offline-lite coverage for persisted public reads, queued r
 | Offline          | Reconnect merge tests                                                                  | 11                | Complete |
 | Offline          | Previously loaded data offline-read test                                               | 11                | Complete |
 | Offline          | Admin create remains online-only while offline                                         | 11                | Complete |
-| Discovery        | Search/filter integration tests                                                        | 12                | Planned  |
-| Discovery        | List/map coordination tests                                                            | 12                | Planned  |
+| Discovery        | Search/filter integration tests                                                        | 12                | Complete |
+| Discovery        | List/map coordination tests                                                            | 12                | Complete |
+| Discovery        | Offline-compatible cached browse discovery regression                                  | 12                | Complete |
 | Admin Web        | Admin moderation workflow E2E                                                          | 13                | Planned  |
 | Admin Web        | Spring management integration tests                                                    | 13                | Planned  |
 | Hardening        | Abuse scenario tests                                                                   | 14                | Planned  |
@@ -113,7 +114,7 @@ Exact tool versions will be pinned when those tools are introduced in code and a
 | 9     | Moderation integration, state-transition, SQL/policy guardrails, and committed E2E flow artifact |
 | 10    | Status derivation, trust escalation, and projection tests                                        |
 | 11    | Offline queue, reconnect/backoff, offline-read, and replay-safety tests                          |
-| 12    | Discovery/search/filter behavior tests                                                           |
+| 12    | Discovery/search/filter behavior tests plus list/map coordination coverage                       |
 | 13    | Admin integration and E2E tests                                                                  |
 | 14    | Resilience, abuse, and performance smoke checks                                                  |
 | 15    | Release smoke verification and critical-journey E2E pass                                         |

@@ -51,10 +51,16 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
 - `apps/mobile/app/moderation/queue.tsx` is now the staff-only moderation queue route.
 - `apps/mobile/app/moderation/reports/[reportId].tsx` is now the staff-only moderation review route.
 - The default map-browse route renders:
-  - the map surface
+  - shared discovery controls
+  - a map/list view toggle
   - marker selection state
-  - a lightweight selected-spring teaser card
+  - a lightweight selected-spring teaser card in map mode
+  - a public-safe results list in list mode
 - The teaser may route into the dedicated detail screen, but it must not expand into full detail content in-place.
+- Phase 12 list/map coordination rules:
+  - search, filters, and sort state are shared across both views
+  - selecting a list result returns the user to map mode with the same spring selected
+  - switching views must not reset the current discovery context
 - The Phase 7 spring-detail route renders:
   - read-only public-safe spring metadata
   - current derived public status
@@ -225,6 +231,8 @@ Map Browse:
 - may render previously loaded public catalog data while offline
 - must clearly signal that the data is cached/stale
 - must not imply offline map-tile support
+- may keep client-side discovery working on the cached catalog rows only
+- must not persist or expose private/staff browse data just to support discovery
 
 Spring Detail:
 
