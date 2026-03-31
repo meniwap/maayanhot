@@ -832,6 +832,21 @@ Phase 14 queue hardening rules:
 - if binary upload succeeds but finalize fails, replay retries only finalize instead of re-uploading the file
 - this delivery metadata remains app-local and never becomes canonical spring or report state
 
+## Phase 15 Release Boundary
+
+Phase 15 does not add new backend tables, migrations, or public read/write surfaces.
+
+Release-facing additions stay bounded to app configuration, documentation, and mobile route polish:
+
+- the only release-documented public mobile deep link is:
+  - `springs-israel://springs/:springId`
+- internal mobile routes such as:
+  - `/dev/session`
+  - moderation routes
+  - admin create/edit routes
+    remain intentionally unsupported as release-facing deep-link contracts
+- privacy and terms placeholder copy remains app-local/documentation-only and does not change backend or policy behavior
+
 ## Development Session Bootstrap
 
 Tracked env template:

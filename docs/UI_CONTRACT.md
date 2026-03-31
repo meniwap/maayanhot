@@ -50,6 +50,8 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
 - `apps/mobile/app/springs/[springId]/report.tsx` is now the authenticated report-compose route.
 - `apps/mobile/app/moderation/queue.tsx` is now the staff-only moderation queue route.
 - `apps/mobile/app/moderation/reports/[reportId].tsx` is now the staff-only moderation review route.
+- `apps/mobile/app/about.tsx` is now the release-facing beta information route.
+- `apps/mobile/app/legal/privacy.tsx` and `apps/mobile/app/legal/terms.tsx` are now placeholder legal routes for beta/store readiness.
 - The default map-browse route renders:
   - shared discovery controls
   - a map/list view toggle
@@ -103,6 +105,11 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
     - finalize pending
     - permanent failure
     - too-large-after-optimization
+- Phase 15 release polish adds:
+  - a first-run onboarding card on the map browse shell
+  - a release-facing about / beta-info route reachable from the browse shell
+  - privacy and terms placeholder routes with explicit placeholder labeling
+  - no new public/mobile exposure of moderation, trust, or internal admin data
 
 ## Admin Web Baseline
 
@@ -483,6 +490,25 @@ Shipped form/media primitives remain presentational only. They must not gain dir
   - call Supabase RPCs directly from the presenter
   - expose audit metadata in the presenter
   - expose pending/rejected content in public-facing routes
+
+## Phase 15 Release Notes
+
+- The first-run onboarding layer must stay bounded:
+  - explain what the app does
+  - explain that new reports are moderated before affecting public truth
+  - explain offline-lite and external-navigation limits
+  - remain dismissible and persisted locally
+- The release-facing about route may describe:
+  - internal beta scope
+  - supported deep-link path
+  - links to privacy/terms placeholders
+- The only release-documented deep link is:
+  - `springs-israel://springs/:springId`
+- Phase 15 must not add:
+  - universal links
+  - Android App Links
+  - public/internal deep links for admin-only or moderation-only routes
+  - a full onboarding redesign
 
 ## UI-Only Agent Permissions
 

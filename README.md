@@ -4,7 +4,7 @@ Production-oriented mobile-first product baseline for discovering, reporting on,
 
 ## Current Status
 
-Phase 13 is complete.
+Phase 15 is complete.
 
 - The monorepo/tooling scaffold exists.
 - The UI foundation exists as a token-driven shell and shared presentational primitives.
@@ -20,7 +20,21 @@ Phase 13 is complete.
 - The mobile app now has bounded offline-lite support for cached public reads and queued report submission replay.
 - The mobile app now has bounded client-side discovery with shared list/map coordination.
 - A real `apps/admin-web` Next.js App Router surface now exists for admin spring management and staff moderation workflows.
-- Phase 14 is not started and requires explicit authorization.
+- The product now has bounded release-readiness work in place:
+  - first-run onboarding for internal beta
+  - About/Beta info and legal placeholder screens
+  - release-facing mobile metadata and EAS build profiles
+  - release smoke coverage for mobile and admin-web
+  - a release checklist and release-readiness matrix
+
+Release-readiness status:
+
+- Internal beta:
+  - iOS: ready and locally validated
+  - Android: ready and locally validated, with a recommendation to do one fresh-emulator rerun before handing off a real beta build after later Maestro/device flake in repeated reruns
+- Store submission:
+  - not claimed as complete
+  - remaining manual and placeholder items are tracked in [docs/RELEASE_CHECKLIST.md](/Users/meniwap/mayyanhot/docs/RELEASE_CHECKLIST.md) and [docs/RELEASE_READINESS.md](/Users/meniwap/mayyanhot/docs/RELEASE_READINESS.md)
 
 ## Product Intent
 
@@ -68,7 +82,9 @@ packages/
   contracts/
   map-core/
   navigation-core/
+  observability-core/
   upload-core/
+  use-cases/
   shared-utils/
 
 supabase/
@@ -97,6 +113,7 @@ Currently active workspaces:
 - `@maayanhot/domain`
 - `@maayanhot/map-core`
 - `@maayanhot/navigation-core`
+- `@maayanhot/observability-core`
 - `@maayanhot/shared-utils`
 - `@maayanhot/ui`
 - `@maayanhot/upload-core`
@@ -226,6 +243,25 @@ Current rules:
 - admin-web remains online-only in this phase
 - no delete flow, contributor management, analytics, or public-surface widening landed in Phase 13
 
+## Phase 15 Release Readiness
+
+Phase 15 adds:
+
+- release-facing mobile metadata in [app.json](/Users/meniwap/mayyanhot/apps/mobile/app.json)
+- internal beta EAS build profiles in [eas.json](/Users/meniwap/mayyanhot/eas.json)
+- a small first-run onboarding layer anchored in the map entry flow
+- `/about`, `/legal/privacy`, and `/legal/terms`
+- release placeholder icon/splash/adaptive-icon assets under [apps/mobile/assets/release](/Users/meniwap/mayyanhot/apps/mobile/assets/release)
+- release smoke flows under [.maestro](/Users/meniwap/mayyanhot/.maestro)
+- a release checklist and readiness matrix under [docs/RELEASE_CHECKLIST.md](/Users/meniwap/mayyanhot/docs/RELEASE_CHECKLIST.md) and [docs/RELEASE_READINESS.md](/Users/meniwap/mayyanhot/docs/RELEASE_READINESS.md)
+
+Current release boundaries:
+
+- the only release-documented public deep link is `springs-israel://springs/:springId`
+- Privacy and Terms are placeholder screens only and are not legal advice
+- internal beta authentication still uses the existing dev-session testing path and is not a public release contract
+- universal links, Android App Links, final legal review, and final store assets remain deferred post-Phase-15 work
+
 ## Local Tooling
 
 Local Supabase DB path:
@@ -275,6 +311,9 @@ Root commands:
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm validate`
+- `pnpm build:beta:ios`
+- `pnpm build:beta:android`
+- `pnpm admin-web:build`
 
 ## Operating Rules
 
@@ -300,13 +339,15 @@ Every agent must read these files before editing code or contracts:
 - `/Users/meniwap/mayyanhot/docs/THEMING.md`
 - `/Users/meniwap/mayyanhot/docs/VERSIONS.md`
 
-## Phase Boundary
+## Roadmap Boundary
 
-No Phase 10 work has started.
+The original Phase 0-15 roadmap is now complete.
 
-Still out of scope at the current state:
+Still manual or deferred at the current state:
 
-- moderation queue and approve/reject flows
-- trusted-contributor privilege expansion
-- offline queueing/sync
-- community-management and trust UI
+- final hosted legal documents and counsel review
+- final store listing assets and merchandising copy
+- Apple App Privacy and Google Data Safety submission forms
+- TestFlight / Play Console upload and tester-group operations
+- universal links and Android App Links
+- public beta auth strategy beyond the internal testing path

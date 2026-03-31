@@ -1,16 +1,46 @@
 {
   "expo": {
-    "name": "Springs Israel",
+    "name": "Springs Israel Beta",
     "slug": "springs-israel",
     "scheme": "springs-israel",
-    "version": "0.1.0",
+    "version": "0.15.0",
     "orientation": "portrait",
+    "icon": "./assets/release/icon.png",
+    "splash": {
+      "image": "./assets/release/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F3E8"
+    },
+    "userInterfaceStyle": "light",
     "ios": {
-      "bundleIdentifier": "com.meniwap.maayanhot"
+      "bundleIdentifier": "com.meniwap.maayanhot",
+      "buildNumber": "15",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Springs Israel Beta to capture photos for moderated spring reports.",
+        "NSPhotoLibraryUsageDescription": "Allow Springs Israel Beta to attach photos from your library to moderated spring reports.",
+        "NSPhotoLibraryAddUsageDescription": "Allow Springs Israel Beta to save temporary processed report photos during internal beta testing."
+      },
+      "supportsTablet": false
     },
     "android": {
-      "package": "com.meniwap.maayanhot"
+      "package": "com.meniwap.maayanhot",
+      "versionCode": 15,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/release/adaptive-icon.png",
+        "backgroundColor": "#F6F3E8"
+      },
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES"]
     },
-    "plugins": ["expo-router", "@maplibre/maplibre-react-native"]
+    "plugins": [
+      "expo-router",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow Springs Israel Beta to capture photos for moderated spring reports.",
+          "photosPermission": "Allow Springs Israel Beta to attach photos from your library to moderated spring reports."
+        }
+      ]
+    ]
   }
 }

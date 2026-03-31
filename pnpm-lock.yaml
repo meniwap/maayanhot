@@ -173,6 +173,9 @@ importers:
       expo-status-bar:
         specifier: ~55.0.4
         version: 55.0.4(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0))(react@19.2.0)
+      expo-system-ui:
+        specifier: ~55.0.11
+        version: 55.0.11(expo@55.0.8)(react-native-web@0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0))
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -1810,6 +1813,9 @@ packages:
   '@react-native/normalize-colors@0.83.2':
     resolution: {integrity: sha512-gkZAb9LoVVzNuYzzOviH7DiPTXQoZPHuiTH2+O2+VWNtOkiznjgvqpwYAhg58a5zfRq5GXlbBdf5mzRj5+3Y5Q==}
 
+  '@react-native/normalize-colors@0.83.4':
+    resolution: {integrity: sha512-9ezxaHjxqTkTOLg62SGg7YhFaE+fxa/jlrWP0nwf7eGFHlGOiTAaRR2KUfiN3K05e+EMbEhgcH/c7bgaXeGyJw==}
+
   '@react-native/virtualized-lists@0.83.0':
     resolution: {integrity: sha512-AVnDppwPidQrPrzA4ETr4o9W+40yuijg3EVgFt2hnMldMZkqwPRrgJL2GSreQjCYe1NfM5Yn4Egyy4Kd0yp4Lw==}
     engines: {node: '>= 20.19.4'}
@@ -2968,6 +2974,16 @@ packages:
       expo-font: '*'
       react: '*'
       react-native: '*'
+
+  expo-system-ui@55.0.11:
+    resolution: {integrity: sha512-ZxcR9/BtL+fkKp1KPPLLc8xgvbqRcyYg+Drf3XjonY/bHIHiyZY1RLnVLxY1wSpFEly5pJkS9erspFok1ES5dQ==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native-web:
+        optional: true
 
   expo@55.0.8:
     resolution: {integrity: sha512-sziDGiDmeRmaSpFwMuSxFhr4vfWrQS1UgVXSTovsUDY0ximABzYdnF5L2OwtD8zjtIww8x2oJGmD6mKS+AoVsw==}
@@ -6514,6 +6530,8 @@ snapshots:
 
   '@react-native/normalize-colors@0.83.2': {}
 
+  '@react-native/normalize-colors@0.83.4': {}
+
   '@react-native/virtualized-lists@0.83.0(@types/react@19.2.0)(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0))(react@19.2.0)':
     dependencies:
       invariant: 2.2.4
@@ -7783,6 +7801,17 @@ snapshots:
       react: 19.2.0
       react-native: 0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0)
       sf-symbols-typescript: 2.2.0
+
+  expo-system-ui@55.0.11(expo@55.0.8)(react-native-web@0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0)):
+    dependencies:
+      '@react-native/normalize-colors': 0.83.4
+      debug: 4.4.3
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.6)(expo-router@55.0.7)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      react-native: 0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0)
+    optionalDependencies:
+      react-native-web: 0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+    transitivePeerDependencies:
+      - supports-color
 
   expo@55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.6)(expo-router@55.0.7)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.0(@babel/core@7.29.0)(@types/react@19.2.0)(react@19.2.0))(react@19.2.0)(typescript@5.9.3):
     dependencies:

@@ -344,6 +344,15 @@ This file records architecture and delivery decisions that materially affect fut
 - Alternatives considered: wire a real vendor SDK now; add multi-pass compression heuristics; move upload optimization into domain or screen code; leave queue/finalize failures opaque.
 - Consequences: Apps can emit bounded analytics and error hooks without vendor lock-in, upload preprocessing stays behind `@maayanhot/upload-core` plus app-local adapters, and the authoritative final MIME/size gate remains the existing Supabase storage bucket.
 
+## ADR-0039: Phase 15 Targets Dual-Platform Internal Beta And Keeps Release Claims Explicit
+
+- Status: Accepted
+- Date: 2026-04-01
+- Decision: Phase 15 optimizes for internal/private beta readiness on both iOS and Android, keeps store-readiness work focused on config, placeholders, checklists, and verified gaps, and documents only the existing scheme-based public spring-detail deep link for release use.
+- Why: The product needs cross-platform beta signal for maps, media, permissions, offline-lite, and moderation-backed reporting without pretending that both stores are fully submission-ready at the same time.
+- Alternatives considered: optimize only for iOS-first release readiness; force full dual-store submission polish now; expand Phase 15 into universal links, App Links, or a larger onboarding redesign.
+- Consequences: Final release reporting must separate beta-ready status from manual store-submission work, privacy/legal surfaces stay placeholder-only until real review, and deep-link support remains intentionally narrow and documented rather than overbuilt.
+
 ## Version Decision Summary
 
 - Node runtime baseline: 24.14.1.

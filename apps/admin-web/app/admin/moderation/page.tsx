@@ -1,11 +1,12 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 import { AdminProtectedShell } from '../../../src/components/AdminProtectedShell';
 import { AdminModerationQueueScreen } from '../../../src/features/moderation/AdminModerationQueueScreen';
 
-export default function AdminModerationPage() {
+function AdminModerationPageContent() {
   const searchParams = useSearchParams();
   const feedback = searchParams.get('feedback');
 
@@ -17,5 +18,13 @@ export default function AdminModerationPage() {
     >
       <AdminModerationQueueScreen feedbackMessage={feedback} />
     </AdminProtectedShell>
+  );
+}
+
+export default function AdminModerationPage() {
+  return (
+    <Suspense fallback={<AdminModerationQueueScreen />}>
+      <AdminModerationPageContent />
+    </Suspense>
   );
 }

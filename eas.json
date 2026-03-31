@@ -1,0 +1,21 @@
+{
+  "cli": {
+    "appVersionSource": "local"
+  },
+  "build": {
+    "beta-ios": {
+      "distribution": "internal",
+      "channel": "beta",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "beta-android": {
+      "distribution": "internal",
+      "channel": "beta",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}

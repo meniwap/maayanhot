@@ -2,34 +2,38 @@
 
 ## Current Phase
 
-Phase 14
+Phase 15
 
 ## Done
 
-- Re-read the control docs and claimed only the Phase 14 files needed for hardening, observability, tests, and documentation.
-- Added the shared `@maayanhot/observability-core` package with provider-neutral analytics and error-reporting interfaces plus noop and in-memory test adapters.
-- Added root-level observability composition without vendor lock-in for:
-  - mobile provider and error boundary wiring
-  - admin-web provider wiring
-  - the Next.js admin-web root error boundary
-- Extended `@maayanhot/upload-core` with prepared-asset and preprocessing policy interfaces for bounded image hardening.
-- Added mobile-side one-pass image preprocessing through `expo-image-manipulator`:
-  - resize longest edge to `2048`
-  - one JPEG re-encode at quality `0.75`
-  - strip EXIF through re-encoding
-  - reject locally if the transformed file still exceeds `15 MiB`
-- Hardened the offline-lite queue so attachment delivery state can now persist:
-  - local ready
-  - slot reserved
-  - binary uploaded
-  - finalize pending
-  - finalized
-- Hardened replay so finalize failures retry finalize without duplicate re-upload of the binary.
-- Added the Phase 14 forward-only migration `20260331120000_phase14_hardening.sql` to:
-  - normalize blank report notes to `null`
-  - reject trimmed report notes longer than `2000` characters
-  - cap reserved report attachments at `8` while preserving idempotent slot replay
-- Added abuse-path, broken-upload, large-image, observability, and performance smoke coverage.
+- Re-read the control docs and claimed only the Phase 15 files needed for release readiness, onboarding polish, release metadata, smoke coverage, and roadmap closure.
+- Added bounded first-run onboarding on the mobile map entry flow with persisted dismissal and beta framing.
+- Added release-facing in-app support routes:
+  - `/about`
+  - `/legal/privacy`
+  - `/legal/terms`
+- Added release placeholder icon, splash, and Android adaptive icon assets under `apps/mobile/assets/release`.
+- Finalized release-facing mobile config in `apps/mobile/app.json`:
+  - app name `Springs Israel Beta`
+  - version `0.15.0`
+  - iOS build number `15`
+  - Android version code `15`
+  - release-facing permission strings
+- Added `eas.json` with internal beta build profiles for iOS and Android.
+- Added repo command paths for:
+  - `pnpm build:beta:ios`
+  - `pnpm build:beta:android`
+  - `pnpm admin-web:build`
+- Formalized the only release-documented public deep link:
+  - `springs-israel://springs/:springId`
+- Added Phase 15 release smoke coverage:
+  - mobile public browse/detail + deep-link Maestro flow
+  - mobile internal-auth report-submit Maestro flow
+  - admin-web release smoke Playwright flow
+- Added release-readiness artifacts:
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/RELEASE_READINESS.md`
+- Closed the original Phase 0-15 roadmap honestly in `docs/MASTER_PLAN.md` without inventing a new major feature phase.
 
 ## In Progress
 
@@ -41,13 +45,19 @@ Phase 14
 
 ## Just Verified
 
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm format:write` succeeded after the Phase 14 code and docs updates.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm validate` passed, including lint, format, typecheck, and the full Vitest suite with `45` passing test files and `167` passing tests.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:start` succeeded after Docker Desktop was started.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:reset` succeeded and applied the Phase 14 migration locally.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:test:local` passed with `Files=8` and `Tests=99`.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && npx supabase db push --linked` applied `20260331120000_phase14_hardening.sql` to the linked remote project.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:admin-web` passed with `2` Playwright admin-web tests.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm exec vitest run tests/ui/mobile-release-readiness.test.tsx tests/ui/map-browse.test.tsx` passed with `2` files and `14` tests.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm typecheck` passed.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm admin-web:build` passed and produced a clean Next.js 16 production build for the admin-web surface.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:release-web` passed with `2` Playwright release-smoke tests.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:admin-web` passed with `2` moderator/admin journey tests.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && cd apps/mobile && npx expo run:ios --device "iPhone 17 Pro"` passed with a successful native install on the iOS simulator.
+- `MAESTRO_DRIVER_STARTUP_TIMEOUT=120000 maestro --device 20913F04-B3F2-440A-B361-56D1D5A01D7B test .maestro/release-public-browse-detail.yaml` passed on iOS.
+- `MAESTRO_DRIVER_STARTUP_TIMEOUT=120000 maestro --device 20913F04-B3F2-440A-B361-56D1D5A01D7B test .maestro/release-report-submit.yaml` passed on iOS.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && cd apps/mobile && npx expo run:android -d Pixel_9` passed with a successful native install on the Android emulator.
+- `maestro --device emulator-5554 test .maestro/release-public-browse-detail.yaml` passed on Android.
+- `maestro --device emulator-5554 test .maestro/release-report-submit.yaml` passed on Android.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm format:write` succeeded after the final Phase 15 docs updates.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm validate` passed, including lint, format, typecheck, and the full Vitest suite with `46` passing test files and `170` passing tests.
 
 ## Remaining In Current Phase
 
@@ -55,24 +65,24 @@ Phase 14
 
 ## Next Smallest Sensible Step
 
-- Wait for explicit authorization before starting Phase 15.
+- Wait for explicit authorization before opening any post-roadmap work.
 
 ## Contracts Changed This Session
 
-- Added the shared `@maayanhot/observability-core` abstraction package for analytics and error reporting hooks.
-- Extended `@maayanhot/upload-core` with prepared-asset and preprocessing policy interfaces.
-- Kept public browse/detail and moderation contracts unchanged while tightening enforcement around:
-  - report note length
-  - blank-note normalization
-  - max-8 attachment reservation
+- No backend schema or public API contract changed in Phase 15.
+- The documented release-facing contract changes are bounded to:
+  - the public deep-link declaration `springs-israel://springs/:springId`
+  - release-facing mobile metadata/config
+  - in-app onboarding and legal placeholder routes
 
 ## Versions Changed This Session
 
-- Phase 14 adds `expo-image-manipulator@~55.0.11` through the Expo-managed install path for bounded mobile image preprocessing.
+- Phase 15 adds `expo-system-ui@~55.0.11` through the Expo-managed install path so Android beta/release configuration can honor the app-level `userInterfaceStyle` setting.
 
 ## Risks Carried Forward
 
-- Observability remains abstraction-only in Phase 14; no real analytics or crash vendor has been introduced yet.
-- Upload hardening remains intentionally bounded to the report-media path; there is still no generalized background sync or media-processing pipeline.
-- Admin web remains intentionally online-only; there is no offline admin support and no broader internal ops surface yet.
-- The Phase 11 React Native Vitest harness still emits upstream `react-test-renderer` deprecation warnings and some `act(...)` warnings in older tests even though the suite passes.
+- Privacy and Terms remain placeholder-level screens and still require final legal review plus hosted public URLs before real store submission.
+- App icon, splash, and adaptive icon are beta-appropriate placeholders, not final brand assets.
+- Internal beta readiness is now validated on both platforms, but Android Maestro/device-state showed flakiness on later repeated reruns after successful smoke passes; a fresh-device rerun is still recommended before a real beta handoff.
+- Admin web remains intentionally online-only and internal-only.
+- The React Native Vitest harness still emits upstream `react-test-renderer` deprecation warnings and some `act(...)` warnings in older tests even though the suite passes.

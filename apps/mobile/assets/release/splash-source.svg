@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1242" height="2436" viewBox="0 0 1242 2436">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="0%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#F6F3E8" />
+      <stop offset="100%" stop-color="#EEE7D7" />
+    </linearGradient>
+    <linearGradient id="badge" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#1F6F8B" />
+      <stop offset="100%" stop-color="#2E8B62" />
+    </linearGradient>
+  </defs>
+  <rect width="1242" height="2436" fill="url(#bg)" />
+  <circle cx="621" cy="848" r="232" fill="url(#badge)" />
+  <path
+    d="M621 644c-88 120-154 212-154 296 0 90 68 158 154 158s154-68 154-158c0-84-66-176-154-296Z"
+    fill="#F6F3E8"
+  />
+  <text
+    x="621"
+    y="1354"
+    fill="#182018"
+    font-family="Heebo, Arial, sans-serif"
+    font-size="92"
+    font-weight="700"
+    text-anchor="middle"
+  >
+    Springs Israel Beta
+  </text>
+  <text
+    x="621"
+    y="1466"
+    fill="#556252"
+    font-family="Heebo, Arial, sans-serif"
+    font-size="48"
+    font-weight="400"
+    text-anchor="middle"
+  >
+    Internal beta placeholder art for release readiness
+  </text>
+</svg>

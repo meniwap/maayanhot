@@ -12,6 +12,9 @@
   },
   "scripts": {
     "admin-web:dev": "pnpm --dir apps/admin-web dev",
+    "admin-web:build": "pnpm --dir apps/admin-web build",
+    "build:beta:android": "npx eas build --platform android --profile beta-android",
+    "build:beta:ios": "npx eas build --platform ios --profile beta-ios",
     "db:local:start": "pnpm exec supabase start",
     "db:local:stop": "pnpm exec supabase stop",
     "db:local:reset": "pnpm exec supabase db reset --local",
@@ -22,6 +25,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/mobile/tsconfig.json --noEmit && tsc -p apps/admin-web/tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e:release-web": "playwright test tests/e2e/release-admin-web-smoke.spec.ts",
     "validate": "pnpm lint && pnpm format && pnpm typecheck && pnpm test",
     "mobile:start": "pnpm --filter @maayanhot/mobile start",
     "test:e2e:admin-web": "playwright test tests/e2e/admin-web.spec.ts"

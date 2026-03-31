@@ -1,0 +1,26 @@
+appId: com.meniwap.maayanhot
+---
+# Required env before running:
+# - MAESTRO_PUBLISHED_SPRING_ID: a published spring id visible in the public catalog
+# - MAESTRO_PUBLISHED_SPRING_TITLE: the visible title of that spring
+
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: 'המשך לקטלוג'
+    timeout: 30000
+- tapOn: 'המשך לקטלוג'
+- assertVisible: 'מפת מעיינות'
+- tapOn: 'רשימה'
+- tapOn: 'למשל עין חניה או בנימין'
+- inputText: ${MAESTRO_PUBLISHED_SPRING_TITLE}
+- hideKeyboard
+- assertVisible: ${MAESTRO_PUBLISHED_SPRING_TITLE}
+- tapOn: 'לפרטי המעיין'
+- assertVisible: ${MAESTRO_PUBLISHED_SPRING_TITLE}
+- tapOn: 'חזרה למפה'
+- openLink: springs-israel://springs/${MAESTRO_PUBLISHED_SPRING_ID}
+- tapOn:
+    text: 'Open'
+    optional: true
+- assertVisible: ${MAESTRO_PUBLISHED_SPRING_TITLE}

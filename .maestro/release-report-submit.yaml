@@ -1,0 +1,28 @@
+appId: com.meniwap.maayanhot
+---
+# Required env before running:
+# - MAESTRO_PUBLISHED_SPRING_ID: a published spring id visible in the public catalog
+# - MAESTRO_PUBLISHED_SPRING_TITLE: the visible title of that spring
+#
+# This flow assumes the internal beta dev-session accounts exist in the linked project.
+
+- openLink: springs-israel://dev/session
+- tapOn:
+    text: 'Open'
+    optional: true
+- extendedWaitUntil:
+    visible: 'סשן פיתוח'
+    timeout: 30000
+- tapOn: 'התחבר כמשתמש דמו'
+- assertVisible:
+    id: dev-session-sign-out
+- back
+- openLink: springs-israel://springs/${MAESTRO_PUBLISHED_SPRING_ID}
+- tapOn:
+    text: 'Open'
+    optional: true
+- assertVisible: ${MAESTRO_PUBLISHED_SPRING_TITLE}
+- tapOn: 'דווח על מצב המעיין'
+- assertVisible: 'דיווח חדש מהשטח'
+- tapOn: 'שלח דיווח'
+- assertVisible: 'נשלח וממתין למודרציה'

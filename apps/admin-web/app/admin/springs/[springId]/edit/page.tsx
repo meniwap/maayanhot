@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { use } from 'react';
+import { Suspense, use } from 'react';
 
 import { AdminProtectedShell } from '../../../../../src/components/AdminProtectedShell';
 import { AdminSpringEditorScreen } from '../../../../../src/features/spring-management/AdminSpringEditorScreen';
 
-export default function AdminEditSpringPage({
+function AdminEditSpringPageContent({
   params,
 }: {
   params: Promise<{ springId: string }> | { springId: string };
@@ -30,5 +30,26 @@ export default function AdminEditSpringPage({
         springId={resolvedParams.springId}
       />
     </AdminProtectedShell>
+  );
+}
+
+export default function AdminEditSpringPage({
+  params,
+}: {
+  params: Promise<{ springId: string }> | { springId: string };
+}) {
+  return (
+    <Suspense
+      fallback={
+        <AdminSpringEditorScreen
+          mode="edit"
+          onBack={() => undefined}
+          onSaved={() => undefined}
+          springId={null}
+        />
+      }
+    >
+      <AdminEditSpringPageContent params={params} />
+    </Suspense>
   );
 }

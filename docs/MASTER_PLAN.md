@@ -9,7 +9,7 @@
 
 ## Current Authorization
 
-Phases 0 and 1 are complete. All later phases remain planned work and must not be executed until explicitly authorized.
+Phases 0 through 15 are complete. The current roadmap is closed, and any new work now requires a new explicit post-roadmap authorization.
 
 ## Phase 0 — Inception, Version Verification, And Control System
 
@@ -372,6 +372,26 @@ Phases 0 and 1 are complete. All later phases remain planned work and must not b
   - there is a clear path to beta distribution and store submission
   - release smoke tests pass
   - launch risks and deferred items are documented clearly
+
+Current outcome:
+
+- completed
+- internal/private beta readiness is now documented and locally validated on iOS
+- Android beta readiness is configured and locally validated, with one explicit note that fresh-device reruns are still recommended after later Maestro/emulator flake during repeated runs
+- store submission remains intentionally split into manual external steps, placeholder artifacts, and deferred post-roadmap work
+
+## Post-Phase-15 Deferred Work
+
+- final hosted legal documents and counsel-reviewed copy
+- final store listing assets, screenshots, and merchandising copy
+- Apple App Privacy and Google Data Safety submission forms
+- universal links and Android App Links if justified after beta feedback
+- public-beta auth strategy beyond the current internal testing setup
+- store submission sequencing decision:
+  - iOS first
+  - Android first
+  - or coordinated dual submission based on beta results
+- broader product work beyond this roadmap should now be re-planned from beta feedback rather than assumed from the original phase list
 
 ## Cross-Phase Risks
 

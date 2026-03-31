@@ -9,7 +9,7 @@
 
 ## Current Status
 
-Phase 14 adds abuse-path, upload-resilience, large-image, observability, and performance smoke coverage without widening public read exposure or changing the moderation/public-safety model.
+Phase 15 closes the current roadmap with internal-beta release readiness, bounded onboarding and legal placeholder surfaces, release metadata/config, and verified release-smoke coverage for the core user and moderator/admin journeys.
 
 ## Inventory By Category
 
@@ -90,9 +90,9 @@ Phase 14 adds abuse-path, upload-resilience, large-image, observability, and per
 | Hardening        | Large image compression/rejection tests                                                | 14                | Complete |
 | Hardening        | Observability abstraction and hook tests                                               | 14                | Complete |
 | Hardening        | Performance smoke checks                                                               | 14                | Complete |
-| Release          | Core user journey E2E                                                                  | 15                | Planned  |
-| Release          | Moderator/admin journey E2E                                                            | 15                | Planned  |
-| Release          | Release smoke checklist verification                                                   | 15                | Planned  |
+| Release          | Core user journey E2E                                                                  | 15                | Complete |
+| Release          | Moderator/admin journey E2E                                                            | 15                | Complete |
+| Release          | Release smoke checklist verification                                                   | 15                | Complete |
 
 ## Recommended Tooling Baseline
 

@@ -10,6 +10,11 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import {
+  dismissReleaseOnboarding,
+  readReleaseOnboardingDismissed,
+} from '../onboarding/onboarding-storage';
+import { ReleaseOnboardingCard } from '../onboarding/ReleaseOnboardingCard';
 import { useDevSession } from '../dev-session/DevSessionProvider';
 import { useOfflineReportQueue } from '../../infrastructure/offline/OfflineReportQueueProvider';
 import { publicSpringReadRepository } from '../../infrastructure/supabase/repositories/public-spring-read-repository';
@@ -34,6 +39,7 @@ export function MapBrowseScreen() {
   const { snapshot } = useDevSession();
   const offlineQueue = useOfflineReportQueue();
   const [discoveryState, setDiscoveryState] = useState(defaultSpringDiscoveryState);
+  const [isOnboardingVisible, setIsOnboardingVisible] = useState(false);
   const MapSurface = mapLibreAdapter.Surface;
   const catalogQuery = useQuery({
     enabled: snapshot.isConfigured,
@@ -61,6 +67,20 @@ export function MapBrowseScreen() {
       }));
     }
   }, [discoveredRows, discoveryState.selectedSpringId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void readReleaseOnboardingDismissed().then((dismissed) => {
+      if (isMounted) {
+        setIsOnboardingVisible(!dismissed);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const mapPalette: MapSurfacePalette = {
     markerSurface: tokens.bg.canvas,
@@ -121,6 +141,15 @@ export function MapBrowseScreen() {
     }));
   };
 
+  const handleDismissOnboarding = async () => {
+    setIsOnboardingVisible(false);
+    try {
+      await dismissReleaseOnboarding();
+    } catch {
+      // Phase 15 keeps onboarding persistence best-effort and local-only.
+    }
+  };
+
   const canOpenModerationQueue =
     snapshot.primaryRole !== null &&
     canModerateReports({
@@ -142,6 +171,12 @@ export function MapBrowseScreen() {
 
   const actionButtons = (
     <>
+      <Button
+        label="אודות בטא"
+        onPress={() => router.push('/about')}
+        testID="open-about-screen"
+        variant="secondary"
+      />
       <Button
         label="סשן פיתוח"
         onPress={() => router.push('/dev/session')}
@@ -191,10 +226,20 @@ export function MapBrowseScreen() {
     />
   );
 
+  const onboardingCard = isOnboardingVisible ? (
+    <ReleaseOnboardingCard
+      onDismiss={() => {
+        void handleDismissOnboarding();
+      }}
+      onOpenAbout={() => router.push('/about')}
+    />
+  ) : null;
+
   if (discoveryState.viewMode === 'list') {
     return (
       <Screen scrollable testID="map-browse-screen">
         <Stack gap="4">
+          {onboardingCard}
           {controls}
           {catalogQuery.isLoading && !catalogQuery.data ? (
             <Card testID="discovery-loading-state" variant="raised">
@@ -258,7 +303,10 @@ export function MapBrowseScreen() {
           },
         ]}
       >
-        {controls}
+        <Stack gap="3">
+          {onboardingCard}
+          {controls}
+        </Stack>
       </View>
 
       {selectedSpring ? (
