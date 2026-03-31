@@ -2,42 +2,34 @@
 
 ## Current Phase
 
-Phase 13
+Phase 14
 
 ## Done
 
-- Re-read the control docs and claimed only the Phase 13 files needed for admin-web, shared use-cases, migration, tests, and documentation.
-- Added the new shared `@maayanhot/use-cases` package and moved the spring-create and moderation flows behind UI-agnostic shared use-case classes.
-- Added `UpdateSpringCommand` plus the matching `SpringRepository` management methods needed for admin web create/list/edit work.
-- Added the Phase 13 forward-only migration:
-  - `public.admin_spring_management_catalog`
-  - `public.admin_spring_management_detail`
-  - `public.admin_update_spring(...)`
-- Built `apps/admin-web` as a real Next.js App Router surface with:
-  - `/login`
-  - `/admin`
-  - `/admin/springs`
-  - `/admin/springs/new`
-  - `/admin/springs/[springId]/edit`
-  - `/admin/moderation`
-  - `/admin/moderation/[reportId]`
-- Added real Supabase-backed web auth/session handling and explicit route gating:
-  - anonymous users are redirected to login
-  - moderators can access moderation but not spring management
-  - admins can access both
-  - unauthorized states render explicit restricted messaging
-- Built the admin spring-management web workflow for:
-  - bounded list view
-  - create draft flow
-  - edit existing spring flow
-  - publish-state updates through the admin RPC path
-- Built the admin moderation web workflow for:
-  - pending queue list
-  - single-report review page
-  - approve / reject actions through the shared `ModerateReportFlow`
-  - private media previews through `@maayanhot/upload-core`
-- Added admin-web integration coverage and Playwright E2E coverage for create/edit/publish and moderation approval.
-- Applied the Phase 13 migration to the linked remote Supabase project and verified the new admin surfaces through both repository tests and browser flows.
+- Re-read the control docs and claimed only the Phase 14 files needed for hardening, observability, tests, and documentation.
+- Added the shared `@maayanhot/observability-core` package with provider-neutral analytics and error-reporting interfaces plus noop and in-memory test adapters.
+- Added root-level observability composition without vendor lock-in for:
+  - mobile provider and error boundary wiring
+  - admin-web provider wiring
+  - the Next.js admin-web root error boundary
+- Extended `@maayanhot/upload-core` with prepared-asset and preprocessing policy interfaces for bounded image hardening.
+- Added mobile-side one-pass image preprocessing through `expo-image-manipulator`:
+  - resize longest edge to `2048`
+  - one JPEG re-encode at quality `0.75`
+  - strip EXIF through re-encoding
+  - reject locally if the transformed file still exceeds `15 MiB`
+- Hardened the offline-lite queue so attachment delivery state can now persist:
+  - local ready
+  - slot reserved
+  - binary uploaded
+  - finalize pending
+  - finalized
+- Hardened replay so finalize failures retry finalize without duplicate re-upload of the binary.
+- Added the Phase 14 forward-only migration `20260331120000_phase14_hardening.sql` to:
+  - normalize blank report notes to `null`
+  - reject trimmed report notes longer than `2000` characters
+  - cap reserved report attachments at `8` while preserving idempotent slot replay
+- Added abuse-path, broken-upload, large-image, observability, and performance smoke coverage.
 
 ## In Progress
 
@@ -49,14 +41,13 @@ Phase 13
 
 ## Just Verified
 
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm exec vitest run tests/web/admin-auth-guard.test.tsx tests/web/admin-spring-management.test.tsx tests/web/admin-moderation.test.tsx` passed.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:admin-web` passed.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:start` succeeded.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:reset` succeeded and applied the Phase 13 migration locally.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:test:local` passed with `Files=7` and `Tests=95`.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && npx supabase db push --linked` applied `20260327183000_phase13_admin_web.sql` to the linked remote project.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm format:write` succeeded after the Phase 13 implementation and docs updates.
-- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm validate` passes, including lint, format, typecheck, and the full Vitest suite.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm format:write` succeeded after the Phase 14 code and docs updates.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm validate` passed, including lint, format, typecheck, and the full Vitest suite with `45` passing test files and `167` passing tests.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:start` succeeded after Docker Desktop was started.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:reset` succeeded and applied the Phase 14 migration locally.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:test:local` passed with `Files=8` and `Tests=99`.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && npx supabase db push --linked` applied `20260331120000_phase14_hardening.sql` to the linked remote project.
+- `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:admin-web` passed with `2` Playwright admin-web tests.
 
 ## Remaining In Current Phase
 
@@ -64,26 +55,24 @@ Phase 13
 
 ## Next Smallest Sensible Step
 
-- Wait for explicit authorization before starting Phase 14.
+- Wait for explicit authorization before starting Phase 15.
 
 ## Contracts Changed This Session
 
-- Added `UpdateSpringCommand` and `updateSpringCommandSchema` in `packages/contracts`.
-- Extended `SpringRepository` with admin-management methods for:
-  - `listManaged(...)`
-  - `getManagedById(...)`
-  - `update(...)`
-  - `findExistingSlugs(...)`
-- Added the shared `@maayanhot/use-cases` package so mobile and admin-web now call the same create and moderation orchestration logic.
-- Added the admin-only database surfaces `public.admin_spring_management_catalog`, `public.admin_spring_management_detail`, and `public.admin_update_spring(...)`.
+- Added the shared `@maayanhot/observability-core` abstraction package for analytics and error reporting hooks.
+- Extended `@maayanhot/upload-core` with prepared-asset and preprocessing policy interfaces.
+- Kept public browse/detail and moderation contracts unchanged while tightening enforcement around:
+  - report note length
+  - blank-note normalization
+  - max-8 attachment reservation
 
 ## Versions Changed This Session
 
-- The previously deferred admin-web baseline is now implemented on `next@16.2.1`.
-- Admin web E2E coverage now uses `@playwright/test@1.58.2`.
+- Phase 14 adds `expo-image-manipulator@~55.0.11` through the Expo-managed install path for bounded mobile image preprocessing.
 
 ## Risks Carried Forward
 
-- Admin web is intentionally online-only in Phase 13; there is no offline admin support and no broader internal ops surface yet.
-- Spring management stays bounded to create/list/edit only; delete flows, bulk actions, and contributor management remain later work.
+- Observability remains abstraction-only in Phase 14; no real analytics or crash vendor has been introduced yet.
+- Upload hardening remains intentionally bounded to the report-media path; there is still no generalized background sync or media-processing pipeline.
+- Admin web remains intentionally online-only; there is no offline admin support and no broader internal ops surface yet.
 - The Phase 11 React Native Vitest harness still emits upstream `react-test-renderer` deprecation warnings and some `act(...)` warnings in older tests even though the suite passes.

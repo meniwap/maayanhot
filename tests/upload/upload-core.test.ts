@@ -3,6 +3,7 @@ import {
   createSupabasePrivateMediaPreviewAdapter,
   createSupabaseUploadAdapter,
   reportImageUploadPolicy,
+  toPreparedUploadAsset,
   type PendingUpload,
 } from '@maayanhot/upload-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,14 +12,16 @@ const uploadMock = vi.fn(async () => ({ error: null }));
 
 const makePendingUpload = (): PendingUpload => ({
   asset: {
-    byteSize: 1024,
-    capturedAt: '2026-03-26T09:00:00.000Z',
-    height: 900,
-    kind: 'image',
-    localId: 'asset-1',
-    localUri: 'file:///tmp/report-photo.jpg',
-    mimeType: 'image/jpeg',
-    width: 1200,
+    ...toPreparedUploadAsset({
+      byteSize: 1024,
+      capturedAt: '2026-03-26T09:00:00.000Z',
+      height: 900,
+      kind: 'image',
+      localId: 'asset-1',
+      localUri: 'file:///tmp/report-photo.jpg',
+      mimeType: 'image/jpeg',
+      width: 1200,
+    }),
   },
   attemptCount: 0,
   lastErrorCode: null,
@@ -85,6 +88,31 @@ describe('supabase upload adapter', () => {
     ).rejects.toBeInstanceOf(UploadValidationError);
   });
 
+  it('rejects images that still exceed the bounded dimension ceiling', async () => {
+    const adapter = createSupabaseUploadAdapter({
+      storage: {
+        from: () => ({
+          upload: uploadMock,
+        }),
+      },
+    } as never);
+
+    await expect(
+      adapter.upload({
+        ...makePendingUpload(),
+        asset: {
+          ...makePendingUpload().asset,
+          height: 2400,
+          width: 3200,
+        },
+      }),
+    ).rejects.toEqual(
+      expect.objectContaining({
+        code: 'image_dimensions_exceed_limit',
+      }),
+    );
+  });
+
   it('keeps the reserved media slot path stable across upload and retry', async () => {
     const adapter = createSupabaseUploadAdapter({
       storage: {
@@ -106,6 +134,27 @@ describe('supabase upload adapter', () => {
     expect(retryResult.mediaId).toBe('media-1');
     expect(retryResult.storagePath).toBe(pendingUpload.storagePath);
     expect(uploadMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves the prepared EXIF stripping flag in the upload result', async () => {
+    const adapter = createSupabaseUploadAdapter({
+      storage: {
+        from: () => ({
+          upload: uploadMock,
+        }),
+      },
+    } as never);
+
+    const result = await adapter.upload({
+      ...makePendingUpload(),
+      asset: {
+        ...makePendingUpload().asset,
+        exifStripped: true,
+        preprocessStatus: 'optimized',
+      },
+    });
+
+    expect(result.exifStripped).toBe(true);
   });
 
   it('creates signed preview urls through the private preview adapter', async () => {

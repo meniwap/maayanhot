@@ -37,6 +37,29 @@ const styles = StyleSheet.create({
   },
 });
 
+const formatQueuedReportFailureMessage = (item: QueuedReportSubmission) => {
+  if (item.attachments.some((attachment) => attachment.deliveryState === 'finalize_pending')) {
+    return 'הקובץ כבר הועלה, והמערכת מנסה להשלים את המטא-דאטה שלו מול השרת.';
+  }
+
+  switch (item.lastErrorCode) {
+    case 'asset_fetch_failed':
+      return 'קובץ התמונה המקומי כבר לא זמין במכשיר, ולכן צריך לבחור אותו מחדש.';
+    case 'file_too_large':
+      return 'הקובץ חורג ממגבלת הגודל המותרת להעלאה.';
+    case 'file_too_large_after_processing':
+      return 'גם אחרי הקטנה ודחיסה חד-פעמית, הקובץ עדיין גדול מדי להעלאה.';
+    case 'image_dimensions_exceed_limit':
+      return 'מימדי התמונה עדיין חורגים מהמגבלה הנתמכת.';
+    case 'mime_type_not_allowed':
+      return 'סוג הקובץ אינו נתמך במסלול ההעלאה המאושר.';
+    case 'upload_failed':
+      return 'ההעלאה נכשלה זמנית, והמערכת תנסה שוב בהתאם למדיניות ה-retry.';
+    default:
+      return 'הדיווח לא נשלח בגלל שגיאה שאינה ניתנת ל-retry אוטומטי.';
+  }
+};
+
 export function SpringDetailView({
   canSubmitReport = false,
   feedbackMessage = null,
@@ -108,9 +131,13 @@ export function SpringDetailView({
                   </AppText>
                   <AppText tone="secondary" variant="bodySm">
                     {item.status === 'failed_permanent'
-                      ? 'הדיווח לא נשלח בגלל שגיאה שאינה ניתנת ל-retry אוטומטי.'
+                      ? formatQueuedReportFailureMessage(item)
                       : item.status === 'retry_scheduled'
-                        ? `הניסיון הבא יקרה לאחר ${item.nextAttemptAt?.slice(11, 16) ?? 'התאוששות חיבור'}.`
+                        ? item.attachments.some(
+                            (attachment) => attachment.deliveryState === 'finalize_pending',
+                          )
+                          ? 'המטא-דאטה של הקובץ כבר ממתינה להשלמה מול השרת בניסיון החוזר הבא.'
+                          : `הניסיון הבא יקרה לאחר ${item.nextAttemptAt?.slice(11, 16) ?? 'התאוששות חיבור'}.`
                         : item.status === 'blocked_auth'
                           ? 'יש להתחבר מחדש עם אותו משתמש כדי להשלים את השליחה.'
                           : 'הדיווח נשמר רק מקומית עד לסיום מסלול השליחה והאישור.'}

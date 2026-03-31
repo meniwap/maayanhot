@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { createMemoryObservability } from '@maayanhot/observability-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AdminEditSpringPage from '../../apps/admin-web/app/admin/springs/[springId]/edit/page';
@@ -101,7 +102,10 @@ describe('admin spring management web flows', () => {
   });
 
   it('creates a draft spring and routes into the edit surface', async () => {
+    const memoryObservability = createMemoryObservability();
+
     renderAdmin(<AdminNewSpringPage />, {
+      observability: memoryObservability.observability,
       snapshot: createAuthenticatedSnapshot('admin'),
     });
 
@@ -123,6 +127,9 @@ describe('admin spring management web flows', () => {
     );
     expect(__getRouterMock().replace).toHaveBeenCalledWith(
       '/admin/springs/spring-1/edit?status=created',
+    );
+    expect(memoryObservability.analytics.map((entry) => entry.name)).toContain(
+      'admin_spring_saved',
     );
   });
 

@@ -335,6 +335,15 @@ This file records architecture and delivery decisions that materially affect fut
 - Alternatives considered: extend Expo web from the mobile app; keep admin-web as a placeholder longer; duplicate create/moderation logic separately in mobile and web feature containers.
 - Consequences: Web and mobile now share the same orchestration layer for spring creation and moderation, admin-web remains online-only, and Phase 13 adds bounded admin-only Supabase views/RPCs for list/edit workflows without widening public read exposure.
 
+## ADR-0038: Phase 14 Keeps Observability Vendorless And Bounds Image Hardening To One Pass
+
+- Status: Accepted
+- Date: 2026-03-31
+- Decision: Phase 14 adds `@maayanhot/observability-core` as a swappable analytics/error-reporting boundary with noop and test adapters only, and limits mobile report-image hardening to a single preprocessing pass before upload.
+- Why: The project needs resilience and instrumentation now, but the authorized phase does not include a full analytics platform, a crash-reporting vendor commitment, or a generalized media-processing pipeline.
+- Alternatives considered: wire a real vendor SDK now; add multi-pass compression heuristics; move upload optimization into domain or screen code; leave queue/finalize failures opaque.
+- Consequences: Apps can emit bounded analytics and error hooks without vendor lock-in, upload preprocessing stays behind `@maayanhot/upload-core` plus app-local adapters, and the authoritative final MIME/size gate remains the existing Supabase storage bucket.
+
 ## Version Decision Summary
 
 - Node runtime baseline: 24.14.1.
@@ -368,3 +377,4 @@ This file records architecture and delivery decisions that materially affect fut
 - Backend baseline: Supabase platform with CLI 2.84.2, PostgreSQL 17 compatibility, and PostGIS 3.6 compatibility.
 - Server-state baseline: TanStack Query 5.95.2.
 - Phase 13 admin-web baseline: Next.js 16.2.1 is now implemented as a separate App Router app with Playwright 1.58.2 browser coverage.
+- Phase 14 hardening baseline: observability remains vendorless behind `@maayanhot/observability-core`, and report-image preprocessing is bounded to one Expo-managed resize/re-encode pass before the existing authoritative Supabase storage checks.

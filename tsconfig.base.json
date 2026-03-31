@@ -22,6 +22,7 @@
       "@maayanhot/domain": ["packages/domain/src/index.ts"],
       "@maayanhot/map-core": ["packages/map-core/src/index.ts"],
       "@maayanhot/navigation-core": ["packages/navigation-core/src/index.ts"],
+      "@maayanhot/observability-core": ["packages/observability-core/src/index.ts"],
       "@maayanhot/shared-utils": ["packages/shared-utils/src/index.ts"],
       "@maayanhot/ui": ["packages/ui/src/index.ts"],
       "@maayanhot/upload-core": ["packages/upload-core/src/index.ts"],

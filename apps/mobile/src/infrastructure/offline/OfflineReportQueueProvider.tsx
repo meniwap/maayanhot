@@ -1,17 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { QueryClient } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Network from 'expo-network';
 import type { PropsWithChildren } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { createSupabaseUploadAdapter } from '@maayanhot/upload-core';
-import type { UploadAssetDescriptor } from '@maayanhot/upload-core';
+import { createSupabaseUploadAdapter, toPreparedUploadAsset } from '@maayanhot/upload-core';
+import type { PreparedUploadAsset, UploadAssetDescriptor } from '@maayanhot/upload-core';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { useDevSession } from '../../features/dev-session/DevSessionProvider';
+import { useMobileObservability } from '../observability/MobileObservabilityProvider';
 import { getSupabaseClient, isSupabaseClientConfigured } from '../supabase/client';
 import { springReportRepository } from '../supabase/repositories/spring-report-repository';
+import { createExpoImageUploadPreprocessor } from '../upload/mobile-image-preprocessor';
 import {
   OfflineReportQueueController,
   type OfflineReportQueueSnapshot,
@@ -22,7 +23,7 @@ import {
 type OfflineReportQueueContextValue = {
   discardPreparedAttachment: (attachment: UploadAssetDescriptor) => Promise<void>;
   discardQueuedReport: (queueId: string) => Promise<void>;
-  prepareAttachment: (asset: UploadAssetDescriptor) => Promise<UploadAssetDescriptor>;
+  prepareAttachment: (asset: UploadAssetDescriptor) => Promise<PreparedUploadAsset>;
   retryQueuedReport: (queueId: string) => Promise<void>;
   snapshot: OfflineReportQueueSnapshot;
   submitDraft: (draft: SubmitSpringReportDraft) => Promise<OfflineReportSubmissionResult>;
@@ -36,7 +37,7 @@ const inertController = {
     return undefined;
   },
   async prepareAttachment(asset: UploadAssetDescriptor) {
-    return asset;
+    return toPreparedUploadAsset(asset);
   },
   async retryQueuedReport() {
     return undefined;
@@ -57,32 +58,36 @@ const inertController = {
 export const OfflineReportQueueContext =
   createContext<OfflineReportQueueContextValue>(inertController);
 
-const createController = (queryClient: QueryClient) =>
-  new OfflineReportQueueController({
-    clearScheduled: (handle) => clearTimeout(handle),
-    fileSystem: FileSystem,
-    now: () => Date.now(),
-    queryClient,
-    reportRepository: springReportRepository,
-    schedule: (callback, delayMs) => setTimeout(callback, delayMs),
-    storage: AsyncStorage,
-    uploadAdapter: isSupabaseClientConfigured()
-      ? createSupabaseUploadAdapter(getSupabaseClient())
-      : {
-          retry: async () => {
-            throw new Error('Supabase upload flow is not configured.');
-          },
-          upload: async () => {
-            throw new Error('Supabase upload flow is not configured.');
-          },
-          validate: () => undefined,
-        },
-  });
-
 export function OfflineReportQueueProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
   const { snapshot: sessionSnapshot } = useDevSession();
-  const [controller] = useState(() => createController(queryClient));
+  const observability = useMobileObservability();
+  const [controller] = useState(
+    () =>
+      new OfflineReportQueueController({
+        analyticsTracker: observability.analytics,
+        assetPreprocessor: createExpoImageUploadPreprocessor(),
+        clearScheduled: (handle) => clearTimeout(handle),
+        errorReporter: observability.errors,
+        fileSystem: FileSystem,
+        now: () => Date.now(),
+        queryClient,
+        reportRepository: springReportRepository,
+        schedule: (callback, delayMs) => setTimeout(callback, delayMs),
+        storage: AsyncStorage,
+        uploadAdapter: isSupabaseClientConfigured()
+          ? createSupabaseUploadAdapter(getSupabaseClient())
+          : {
+              retry: async () => {
+                throw new Error('Supabase upload flow is not configured.');
+              },
+              upload: async () => {
+                throw new Error('Supabase upload flow is not configured.');
+              },
+              validate: () => undefined,
+            },
+      }),
+  );
   const [queueSnapshot, setQueueSnapshot] = useState<OfflineReportQueueSnapshot>(() =>
     controller.getSnapshot(),
   );

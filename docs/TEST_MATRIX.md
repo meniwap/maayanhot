@@ -9,7 +9,7 @@
 
 ## Current Status
 
-Phase 13 adds bounded admin-web coverage for role-gated spring management and moderation workflows, plus Playwright browser coverage on the new Next.js admin surface.
+Phase 14 adds abuse-path, upload-resilience, large-image, observability, and performance smoke coverage without widening public read exposure or changing the moderation/public-safety model.
 
 ## Inventory By Category
 
@@ -36,7 +36,7 @@ Phase 13 adds bounded admin-web coverage for role-gated spring management and mo
 | Domain           | Permission guard tests for spring creation and moderation boundaries                   | 3                 | Complete |
 | Domain           | Repository contract tests / interface conformance tests                                | 3                 | Complete |
 | Domain           | Map/navigation/upload adapter port conformance tests                                   | 3                 | Complete |
-| Domain           | Validation schema tests                                                                | 3                 | Planned  |
+| Domain           | Validation schema tests                                                                | 3                 | Complete |
 | Database         | Migration reproducibility and config integrity tests                                   | 4                 | Complete |
 | Database         | Schema constraint and contract-alignment tests                                         | 4                 | Complete |
 | Database         | Geospatial schema/index integrity tests                                                | 4                 | Complete |
@@ -84,10 +84,12 @@ Phase 13 adds bounded admin-web coverage for role-gated spring management and mo
 | Admin Web        | Phase 13 admin-web SQL/policy guardrails                                               | 13                | Complete |
 | Admin Web        | Playwright admin create/edit/publish E2E                                               | 13                | Complete |
 | Admin Web        | Playwright admin moderation approval E2E                                               | 13                | Complete |
-| Hardening        | Abuse scenario tests                                                                   | 14                | Planned  |
-| Hardening        | Broken upload resilience tests                                                         | 14                | Planned  |
-| Hardening        | Large image compression/rejection tests                                                | 14                | Planned  |
-| Hardening        | Performance smoke checks                                                               | 14                | Planned  |
+| Database         | Phase 14 hardening SQL / abuse-boundary guardrails                                     | 14                | Complete |
+| Hardening        | Abuse scenario tests                                                                   | 14                | Complete |
+| Hardening        | Broken upload resilience tests                                                         | 14                | Complete |
+| Hardening        | Large image compression/rejection tests                                                | 14                | Complete |
+| Hardening        | Observability abstraction and hook tests                                               | 14                | Complete |
+| Hardening        | Performance smoke checks                                                               | 14                | Complete |
 | Release          | Core user journey E2E                                                                  | 15                | Planned  |
 | Release          | Moderator/admin journey E2E                                                            | 15                | Planned  |
 | Release          | Release smoke checklist verification                                                   | 15                | Planned  |

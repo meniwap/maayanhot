@@ -6,10 +6,23 @@ import {
   type ReportId,
 } from '@maayanhot/contracts';
 import type { FinalizeReportMediaUploadCommand, SpringReportRepository } from '@maayanhot/domain';
-import type { PendingUpload, UploadAdapter, UploadAssetDescriptor } from '@maayanhot/upload-core';
-import { UploadValidationError, reportImageUploadPolicy } from '@maayanhot/upload-core';
+import type { AnalyticsTracker, ErrorReporter } from '@maayanhot/observability-core';
+import { createNoopAnalyticsTracker, createNoopErrorReporter } from '@maayanhot/observability-core';
+import type {
+  PendingUpload,
+  PreparedUploadAsset,
+  UploadAdapter,
+  UploadAssetDescriptor,
+  UploadAssetPreprocessor,
+  UploadResult,
+} from '@maayanhot/upload-core';
+import {
+  UploadValidationError,
+  reportImageUploadPolicy,
+  toPreparedUploadAsset,
+} from '@maayanhot/upload-core';
 
-export type ReportAttachmentDraft = UploadAssetDescriptor;
+export type ReportAttachmentDraft = PreparedUploadAsset;
 
 export type SubmitSpringReportDraft = {
   note: string;
@@ -19,7 +32,16 @@ export type SubmitSpringReportDraft = {
   attachments: ReportAttachmentDraft[];
 };
 
+export type QueuedAttachmentDeliveryState =
+  | 'binary_uploaded'
+  | 'finalize_pending'
+  | 'finalized'
+  | 'local_ready'
+  | 'slot_reserved';
+
 export type QueuedReportAttachment = ReportAttachmentDraft & {
+  deliveryState: QueuedAttachmentDeliveryState;
+  finalizeCommand: FinalizeReportMediaUploadCommand | null;
   finalizedMediaId: string | null;
   lastErrorCode: string | null;
   pendingUpload: PendingUpload | null;
@@ -96,11 +118,15 @@ type QueueFileSystem = {
   copyAsync(options: { from: string; to: string }): Promise<void>;
   deleteAsync(uri: string, options?: { idempotent?: boolean }): Promise<void>;
   documentDirectory: string | null;
-  getInfoAsync(uri: string): Promise<{ exists?: boolean }>;
+  getInfoAsync(uri: string): Promise<{ exists?: boolean; size?: number | null }>;
   makeDirectoryAsync(uri: string, options?: { intermediates?: boolean }): Promise<void>;
 };
 
 type QueueDependencies = {
+  analyticsTracker?: AnalyticsTracker;
+  assetPreprocessor?: UploadAssetPreprocessor;
+  clearScheduled: (handle: ReturnType<typeof setTimeout>) => void;
+  errorReporter?: ErrorReporter;
   fileSystem: QueueFileSystem;
   now: () => number;
   queryClient: QueryClient;
@@ -108,7 +134,6 @@ type QueueDependencies = {
   schedule: (callback: () => void, delayMs: number) => ReturnType<typeof setTimeout>;
   storage: QueueStorage;
   uploadAdapter: UploadAdapter;
-  clearScheduled: (handle: ReturnType<typeof setTimeout>) => void;
 };
 
 const OFFLINE_QUEUE_STORAGE_KEY = 'maayanhot:offline-report-queue:v1';
@@ -157,14 +182,15 @@ const fileExtensionFromAsset = (asset: UploadAssetDescriptor) => {
 
 const toFinalizeCommand = (
   mediaId: string,
-  asset: UploadAssetDescriptor,
+  asset: PreparedUploadAsset,
+  uploadResult?: UploadResult,
 ): FinalizeReportMediaUploadCommand => ({
-  byteSize: asset.byteSize,
+  byteSize: uploadResult?.byteSize ?? asset.byteSize,
   capturedAt: asset.capturedAt,
-  exifStripped: false,
-  height: asset.height,
+  exifStripped: uploadResult?.exifStripped ?? asset.exifStripped,
+  height: uploadResult?.height ?? asset.height,
   mediaId,
-  width: asset.width,
+  width: uploadResult?.width ?? asset.width,
 });
 
 const toCommand = (item: QueuedReportSubmission): SubmitSpringReportCommand => {
@@ -238,7 +264,14 @@ const isPermanentError = (error: unknown) => {
   }
 
   if (
-    ['mime_type_not_allowed', 'file_too_large', 'asset_fetch_failed', '23502'].includes(errorCode)
+    [
+      'asset_fetch_failed',
+      'file_too_large',
+      'file_too_large_after_processing',
+      'image_dimensions_exceed_limit',
+      'mime_type_not_allowed',
+      '23502',
+    ].includes(errorCode)
   ) {
     return true;
   }
@@ -247,7 +280,8 @@ const isPermanentError = (error: unknown) => {
     message.includes('not published') ||
     message.includes('validation') ||
     message.includes('not found') ||
-    message.includes('owned media slot not found')
+    message.includes('owned media slot not found') ||
+    message.includes('too many attachments')
   );
 };
 
@@ -282,14 +316,12 @@ const toPermanentFailureItem = (
   updatedAt: toIsoNow(now),
 });
 
-const toPreparedAttachment = (
-  asset: UploadAssetDescriptor,
-  copiedUri: string,
-): QueuedReportAttachment => ({
+const toPreparedAttachment = (asset: PreparedUploadAsset): QueuedReportAttachment => ({
   ...asset,
+  deliveryState: 'local_ready',
+  finalizeCommand: null,
   finalizedMediaId: null,
   lastErrorCode: null,
-  localUri: copiedUri,
   pendingUpload: null,
 });
 
@@ -297,13 +329,24 @@ const toPersistedState = (snapshot: OfflineReportQueueSnapshot): PersistedQueueS
   items: snapshot.items,
 });
 
+const nextPendingUploadState = (pendingUpload: PendingUpload, errorCode: string | null) => ({
+  ...pendingUpload,
+  attemptCount: pendingUpload.attemptCount + 1,
+  lastErrorCode: errorCode,
+});
+
 export class OfflineReportQueueController {
+  private readonly analyticsTracker: AnalyticsTracker;
+  private readonly errorReporter: ErrorReporter;
   private listeners = new Set<QueueListener>();
   private processing = false;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private snapshot: OfflineReportQueueSnapshot = defaultSnapshot;
 
-  constructor(private readonly dependencies: QueueDependencies) {}
+  constructor(private readonly dependencies: QueueDependencies) {
+    this.analyticsTracker = dependencies.analyticsTracker ?? createNoopAnalyticsTracker();
+    this.errorReporter = dependencies.errorReporter ?? createNoopErrorReporter();
+  }
 
   subscribe(listener: QueueListener) {
     this.listeners.add(listener);
@@ -435,14 +478,86 @@ export class OfflineReportQueueController {
     }
 
     const fileExtension = fileExtensionFromAsset(asset) ?? 'jpg';
-    const destinationUri = `${directoryUri}${asset.localId}-${createClientUuid()}.${fileExtension}`;
+    const copiedUri = `${directoryUri}${asset.localId}-${createClientUuid()}.${fileExtension}`;
 
     await this.dependencies.fileSystem.copyAsync({
       from: asset.localUri,
-      to: destinationUri,
+      to: copiedUri,
     });
 
-    return toPreparedAttachment(asset, destinationUri);
+    try {
+      let preparedAsset = toPreparedUploadAsset({
+        ...asset,
+        localUri: copiedUri,
+      });
+
+      if (this.dependencies.assetPreprocessor) {
+        preparedAsset = await this.dependencies.assetPreprocessor.prepare(
+          preparedAsset,
+          reportImageUploadPolicy,
+        );
+      }
+
+      if (preparedAsset.localUri !== copiedUri) {
+        const transformedUri = `${directoryUri}${asset.localId}-${createClientUuid()}.${
+          fileExtensionFromAsset(preparedAsset) ?? 'jpg'
+        }`;
+
+        await this.dependencies.fileSystem.copyAsync({
+          from: preparedAsset.localUri,
+          to: transformedUri,
+        });
+        await this.dependencies.fileSystem.deleteAsync(copiedUri, {
+          idempotent: true,
+        });
+        await this.dependencies.fileSystem.deleteAsync(preparedAsset.localUri, {
+          idempotent: true,
+        });
+        preparedAsset = {
+          ...preparedAsset,
+          localUri: transformedUri,
+        };
+      }
+
+      if (preparedAsset.preprocessStatus === 'optimized') {
+        void this.analyticsTracker.track({
+          metadata: {
+            optimizedByteSize: preparedAsset.byteSize,
+            originalByteSize: preparedAsset.originalByteSize,
+          },
+          name: 'report_attachment_preprocessed',
+        });
+      }
+
+      return toPreparedAttachment(preparedAsset);
+    } catch (error) {
+      await this.dependencies.fileSystem.deleteAsync(copiedUri, {
+        idempotent: true,
+      });
+
+      const errorCode = toErrorCode(error);
+
+      if (errorCode === 'file_too_large_after_processing') {
+        void this.analyticsTracker.track({
+          metadata: {
+            originalByteSize: asset.byteSize,
+          },
+          name: 'report_attachment_rejected_large',
+        });
+      }
+
+      void this.errorReporter.captureError(error, {
+        action: 'prepare_attachment',
+        code: errorCode,
+        feature: 'report_queue',
+        metadata: {
+          localId: asset.localId,
+        },
+        severity: 'warning',
+      });
+
+      throw error;
+    }
   }
 
   async discard(queueId: string) {
@@ -511,6 +626,8 @@ export class OfflineReportQueueController {
       attemptCount: 0,
       attachments: draft.attachments.map((attachment) => ({
         ...attachment,
+        deliveryState: 'local_ready',
+        finalizeCommand: null,
         finalizedMediaId: null,
         lastErrorCode: null,
         pendingUpload: null,
@@ -537,6 +654,15 @@ export class OfflineReportQueueController {
 
     await this.persist();
     this.emit();
+    void this.analyticsTracker.track({
+      metadata: {
+        attachmentCount: item.attachments.length,
+        ownerUserId,
+        queueId,
+        springId: item.springId,
+      },
+      name: 'report_queue_enqueued',
+    });
 
     if (!this.canProcessCandidate(ownerUserId)) {
       return {
@@ -624,6 +750,13 @@ export class OfflineReportQueueController {
       status: 'syncing',
       updatedAt: toIsoNow(this.dependencies.now),
     });
+    void this.analyticsTracker.track({
+      metadata: {
+        queueId: item.queueId,
+        springId: item.springId,
+      },
+      name: 'report_queue_replay_started',
+    });
 
     try {
       const report = item.remoteReportId
@@ -647,8 +780,21 @@ export class OfflineReportQueueController {
       };
       await this.replaceItem(item.queueId, nextItem);
 
-      for (const attachment of nextItem.attachments) {
-        if (attachment.finalizedMediaId) {
+      for (const originalAttachment of nextItem.attachments) {
+        let attachment = this.getAttachment(nextItem.queueId, originalAttachment.localId);
+
+        if (!attachment || attachment.finalizedMediaId) {
+          continue;
+        }
+
+        if (attachment.finalizeCommand) {
+          const finalizedMedia = await this.finalizeAttachment(nextItem.queueId, attachment);
+          attachment = this.getAttachment(nextItem.queueId, originalAttachment.localId);
+
+          if (!attachment || finalizedMedia.id !== attachment.finalizedMediaId) {
+            continue;
+          }
+
           continue;
         }
 
@@ -675,29 +821,64 @@ export class OfflineReportQueueController {
 
           await this.replaceAttachment(nextItem.queueId, attachment.localId, {
             ...attachment,
+            deliveryState: 'slot_reserved',
             pendingUpload,
           });
+          attachment =
+            this.getAttachment(nextItem.queueId, originalAttachment.localId) ?? attachment;
         }
 
         await this.dependencies.uploadAdapter.validate(attachment, reportImageUploadPolicy);
 
-        const uploadResult =
-          pendingUpload.attemptCount > 0 || pendingUpload.lastErrorCode
-            ? await this.dependencies.uploadAdapter.retry({
-                ...pendingUpload,
-                attemptCount: pendingUpload.attemptCount + 1,
-              })
-            : await this.dependencies.uploadAdapter.upload(pendingUpload);
-        const finalizedMedia = await this.dependencies.reportRepository.finalizeMediaUpload(
-          toFinalizeCommand(uploadResult.mediaId, attachment),
-        );
+        try {
+          const uploadResult =
+            pendingUpload.attemptCount > 0 || pendingUpload.lastErrorCode
+              ? await this.dependencies.uploadAdapter.retry({
+                  ...pendingUpload,
+                  asset: attachment,
+                  attemptCount: pendingUpload.attemptCount + 1,
+                })
+              : await this.dependencies.uploadAdapter.upload({
+                  ...pendingUpload,
+                  asset: attachment,
+                });
 
-        await this.replaceAttachment(nextItem.queueId, attachment.localId, {
-          ...attachment,
-          finalizedMediaId: finalizedMedia.id,
-          lastErrorCode: null,
-          pendingUpload: null,
-        });
+          const finalizeCommand = toFinalizeCommand(uploadResult.mediaId, attachment, uploadResult);
+
+          await this.replaceAttachment(nextItem.queueId, attachment.localId, {
+            ...attachment,
+            deliveryState: 'binary_uploaded',
+            finalizeCommand,
+            lastErrorCode: null,
+            pendingUpload: null,
+          });
+          await this.replaceAttachment(nextItem.queueId, attachment.localId, {
+            ...(this.getAttachment(nextItem.queueId, attachment.localId) ?? attachment),
+            deliveryState: 'finalize_pending',
+            finalizeCommand,
+            lastErrorCode: null,
+            pendingUpload: null,
+          });
+          attachment =
+            this.getAttachment(nextItem.queueId, originalAttachment.localId) ?? attachment;
+
+          await this.finalizeAttachment(nextItem.queueId, attachment);
+        } catch (error) {
+          const errorCode = toErrorCode(error);
+          const currentAttachment =
+            this.getAttachment(nextItem.queueId, originalAttachment.localId) ?? attachment;
+
+          await this.replaceAttachment(nextItem.queueId, originalAttachment.localId, {
+            ...currentAttachment,
+            lastErrorCode: errorCode,
+            pendingUpload:
+              currentAttachment.pendingUpload !== null
+                ? nextPendingUploadState(currentAttachment.pendingUpload, errorCode)
+                : currentAttachment.pendingUpload,
+          });
+
+          throw error;
+        }
       }
 
       const completedItem = this.getItem(item.queueId);
@@ -724,6 +905,14 @@ export class OfflineReportQueueController {
       };
       await this.persist();
       this.emit();
+      void this.analyticsTracker.track({
+        metadata: {
+          queueId: item.queueId,
+          reportId: report.id,
+          springId: item.springId,
+        },
+        name: 'report_queue_replay_succeeded',
+      });
       await this.dependencies.queryClient.invalidateQueries({
         queryKey: ['public-spring-catalog'],
       });
@@ -748,13 +937,57 @@ export class OfflineReportQueueController {
       const nextItem = isPermanentError(error)
         ? toPermanentFailureItem(currentItem, error, this.dependencies.now)
         : toRetryScheduledItem(currentItem, error, this.dependencies.now);
+      const errorCode = toErrorCode(error);
 
       await this.replaceItem(currentItem.queueId, nextItem);
+      void this.errorReporter.captureError(error, {
+        action: 'process_queue_item',
+        code: errorCode,
+        feature: 'report_queue',
+        metadata: {
+          queueId: currentItem.queueId,
+          springId: currentItem.springId,
+          status: nextItem.status,
+        },
+        severity: nextItem.status === 'failed_permanent' ? 'error' : 'warning',
+      });
+      void this.analyticsTracker.track({
+        metadata: {
+          errorCode,
+          queueId: currentItem.queueId,
+          springId: currentItem.springId,
+        },
+        name:
+          nextItem.status === 'failed_permanent'
+            ? 'report_queue_failed_permanent'
+            : 'report_queue_retry_scheduled',
+      });
 
       return {
         kind: 'error' as const,
       };
     }
+  }
+
+  private async finalizeAttachment(queueId: string, attachment: QueuedReportAttachment) {
+    if (!attachment.finalizeCommand) {
+      throw new Error('Finalize command is missing for the uploaded attachment.');
+    }
+
+    const finalizedMedia = await this.dependencies.reportRepository.finalizeMediaUpload(
+      attachment.finalizeCommand,
+    );
+
+    await this.replaceAttachment(queueId, attachment.localId, {
+      ...attachment,
+      deliveryState: 'finalized',
+      finalizeCommand: null,
+      finalizedMediaId: finalizedMedia.id,
+      lastErrorCode: null,
+      pendingUpload: null,
+    });
+
+    return finalizedMedia;
   }
 
   private canProcessCandidate(ownerUserId: string) {
@@ -768,6 +1001,12 @@ export class OfflineReportQueueController {
 
   private getItem(queueId: string) {
     return this.snapshot.items.find((candidate) => candidate.queueId === queueId) ?? null;
+  }
+
+  private getAttachment(queueId: string, localId: string) {
+    const item = this.getItem(queueId);
+
+    return item?.attachments.find((attachment) => attachment.localId === localId) ?? null;
   }
 
   private async replaceAttachment(

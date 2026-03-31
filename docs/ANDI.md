@@ -2,19 +2,18 @@
 
 ## Current Phase
 
-Phase 13
+Phase 14
 
 ## Current Objective
 
-Build the admin-web foundation, admin spring-management UI, and admin moderation workflow on web without widening public read exposure or bypassing the existing moderation and security model.
+Harden abuse handling, upload resilience, large-image behavior, observability boundaries, and performance smoke coverage without widening public read exposure or bypassing the existing contracts, moderation flow, or offline-lite model.
 
 ## Active Workstream
 
-Complete. Phase 13 now provides a real Next.js admin surface with web auth/session guards, admin spring create/list/edit flows, moderator/admin review flows, shared use-cases, and browser-level E2E coverage.
+Phase 14 focuses on resilience and instrumentation only: bounded abuse-path hardening, one-pass image preprocessing before upload, replay-safe finalize behavior, swappable observability hooks, and the matching abuse/resilience/performance test coverage.
 
 ## Files Currently Being Modified / Claimed
 
-- `/Users/meniwap/mayyanhot/.gitignore`
 - `/Users/meniwap/mayyanhot/docs/ANDI.md`
 - `/Users/meniwap/mayyanhot/docs/PROGRESS.md`
 - `/Users/meniwap/mayyanhot/docs/DECISIONS.md`
@@ -22,58 +21,51 @@ Complete. Phase 13 now provides a real Next.js admin surface with web auth/sessi
 - `/Users/meniwap/mayyanhot/docs/UI_CONTRACT.md`
 - `/Users/meniwap/mayyanhot/docs/TEST_MATRIX.md`
 - `/Users/meniwap/mayyanhot/docs/VERSIONS.md`
-- `/Users/meniwap/mayyanhot/README.md`
-- `/Users/meniwap/mayyanhot/apps/admin-web/README.md`
+- `/Users/meniwap/mayyanhot/apps/mobile/package.json`
+- `/Users/meniwap/mayyanhot/apps/mobile/src/infrastructure/providers/AppProviders.tsx`
+- `/Users/meniwap/mayyanhot/apps/mobile/src/infrastructure/offline/**`
+- `/Users/meniwap/mayyanhot/apps/mobile/src/infrastructure/services/submit-report-flow.ts`
+- `/Users/meniwap/mayyanhot/apps/mobile/src/features/report-compose/ReportComposeScreen.tsx`
+- `/Users/meniwap/mayyanhot/apps/mobile/src/features/spring-detail/**`
 - `/Users/meniwap/mayyanhot/apps/admin-web/app/**`
 - `/Users/meniwap/mayyanhot/apps/admin-web/src/**`
 - `/Users/meniwap/mayyanhot/apps/admin-web/package.json`
-- `/Users/meniwap/mayyanhot/apps/admin-web/next.config.ts`
-- `/Users/meniwap/mayyanhot/apps/admin-web/.env.example`
-- `/Users/meniwap/mayyanhot/apps/mobile/src/features/admin-spring-create/AdminSpringCreateScreen.tsx`
-- `/Users/meniwap/mayyanhot/apps/mobile/src/features/moderation/ModerationReviewScreen.tsx`
-- `/Users/meniwap/mayyanhot/apps/mobile/src/infrastructure/services/create-spring-flow.ts`
-- `/Users/meniwap/mayyanhot/apps/mobile/src/infrastructure/services/moderate-report-flow.ts`
-- `/Users/meniwap/mayyanhot/apps/mobile/src/infrastructure/supabase/repositories/spring-repository.ts`
-- `/Users/meniwap/mayyanhot/apps/mobile/tsconfig.json`
-- `/Users/meniwap/mayyanhot/packages/contracts/src/index.ts`
-- `/Users/meniwap/mayyanhot/packages/domain/src/repositories.ts`
-- `/Users/meniwap/mayyanhot/packages/use-cases/**`
-- `/Users/meniwap/mayyanhot/supabase/migrations/20260327183000_phase13_admin_web.sql`
-- `/Users/meniwap/mayyanhot/supabase/tests/database/phase13_admin_web.test.sql`
-- `/Users/meniwap/mayyanhot/tests/web/**`
-- `/Users/meniwap/mayyanhot/tests/e2e/admin-web.spec.ts`
-- `/Users/meniwap/mayyanhot/tests/database/phase13-admin-web.test.ts`
-- `/Users/meniwap/mayyanhot/tests/database/schema-files.test.ts`
-- `/Users/meniwap/mayyanhot/tests/integration/moderation-flow.test.ts`
-- `/Users/meniwap/mayyanhot/tests/domain/contracts-conformance.test.ts`
-- `/Users/meniwap/mayyanhot/playwright.config.ts`
 - `/Users/meniwap/mayyanhot/package.json`
-- `/Users/meniwap/mayyanhot/tsconfig.base.json`
-- `/Users/meniwap/mayyanhot/tsconfig.json`
+- `/Users/meniwap/mayyanhot/packages/upload-core/**`
+- `/Users/meniwap/mayyanhot/packages/observability-core/**`
+- `/Users/meniwap/mayyanhot/supabase/migrations/20260328*_phase14_hardening.sql`
+- `/Users/meniwap/mayyanhot/supabase/tests/database/phase14_hardening.test.sql`
+- `/Users/meniwap/mayyanhot/tests/upload/**`
+- `/Users/meniwap/mayyanhot/tests/integration/offline-report-queue.test.ts`
+- `/Users/meniwap/mayyanhot/tests/integration/report-submit-flow.test.tsx`
+- `/Users/meniwap/mayyanhot/tests/web/**`
+- `/Users/meniwap/mayyanhot/tests/database/phase14-hardening.test.ts`
+- `/Users/meniwap/mayyanhot/tests/performance/**`
+- `/Users/meniwap/mayyanhot/tests/database/schema-files.test.ts`
 - `/Users/meniwap/mayyanhot/vitest.config.ts`
 
 ## Next Required Action
 
-- Wait for explicit authorization before Phase 14.
+- Finish the Phase 14 git push, report the exact validation results, and stop without starting Phase 15.
 
 ## Blockers
 
-- No Phase 13 blocker is currently open.
+- No Phase 14 blocker is currently open.
 
 ## Recent Decision Summary
 
-- Admin web is a real separate Next.js App Router app, not an Expo-web extension of the mobile app.
-- Shared create/update/moderation orchestration now lives in `@maayanhot/use-cases` so mobile and web stay aligned.
-- Admin spring-management surfaces and RPCs are admin-only and remain separate from public read surfaces.
-- Web moderation continues to use the same staff views, RPC-only decision writes, and derived projection path that mobile already uses.
+- Phase 14 observability must stay abstraction-only and swappable; no real analytics or crash vendor is introduced.
+- Large-image handling is hybrid: one-pass resize plus JPEG re-encode on device, followed by the existing authoritative storage boundary.
+- Upload resilience work remains bounded to report-submit and replay flows; no generalized sync engine or new product surface lands in this phase.
 
 ## Last Successful Validation Run
 
-- 2026-03-27: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm exec vitest run tests/web/admin-auth-guard.test.tsx tests/web/admin-spring-management.test.tsx tests/web/admin-moderation.test.tsx` passed.
-- 2026-03-27: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:admin-web` passed.
-- 2026-03-27: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:start && pnpm db:local:reset && pnpm db:test:local` passed locally, including the new Phase 13 pgTAP file.
-- 2026-03-27: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && npx supabase db push --linked` applied the Phase 13 admin-web migration to the linked remote project.
-- 2026-03-27: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm validate` passed after the Phase 13 implementation and docs updates.
+- 2026-03-31: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm format:write` succeeded after the Phase 14 hardening changes.
+- 2026-03-31: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm validate` passed with `45` test files and `167` tests.
+- 2026-03-31: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:start` succeeded once Docker Desktop was running.
+- 2026-03-31: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm db:local:reset && pnpm db:test:local` passed locally, including the new Phase 14 pgTAP file, with `Files=8` and `Tests=99`.
+- 2026-03-31: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && npx supabase db push --linked` applied `20260331120000_phase14_hardening.sql` to the linked remote project.
+- 2026-03-31: `source ~/.nvm/nvm.sh && nvm use 24.14.1 >/dev/null && pnpm test:e2e:admin-web` passed with `2` browser tests.
 
 ## What Every Agent Must Read Before Editing Anything
 

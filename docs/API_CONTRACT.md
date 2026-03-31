@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file defines the boundary between shared contracts, pure domain logic, and the database/application surfaces introduced through Phases 4, 5, 8, 9, 10, and 13.
+This file defines the boundary between shared contracts, pure domain logic, and the database/application surfaces introduced through Phases 4, 5, 8, 9, 10, 13, and 14.
 
 Non-negotiable rule:
 
@@ -58,6 +58,16 @@ Phase 13 adds:
   - this layer may depend on concrete Supabase web runtime packages
   - this layer must still satisfy `packages/domain` ports instead of bypassing them
 
+Phase 14 adds:
+
+- `packages/observability-core`
+  - provider-neutral analytics and error-reporting interfaces
+  - noop and test adapters only in this phase
+  - use-case packages stay vendor-free; apps compose observability around them
+- extended `packages/upload-core`
+  - upload-preparation interfaces and bounded image-transform policy
+  - the concrete mobile image-preprocessing adapter stays app-local rather than leaking into the domain layer
+
 ## Local Supabase Structure
 
 Phase 4 adds:
@@ -69,6 +79,7 @@ Phase 4 adds:
 - `supabase/migrations/20260326223000_phase9_moderation.sql`
 - `supabase/migrations/20260327090000_phase10_trust_and_projection.sql`
 - `supabase/migrations/20260327183000_phase13_admin_web.sql`
+- `supabase/migrations/20260331120000_phase14_hardening.sql`
 - `supabase/seed/`
 - `supabase/tests/database/`
 
@@ -731,6 +742,7 @@ Idempotent report submission RPC:
   - authenticated only
   - still enforces the existing published-spring and pending-moderation path
   - accepts `client_submission_id`
+  - trims report notes, normalizes blank notes to `null`, and rejects notes longer than `2000` characters
   - returns the already-created report when the same reporter replays the same `client_submission_id`
 
 Idempotent media-slot reservation RPC:
@@ -738,6 +750,7 @@ Idempotent media-slot reservation RPC:
 - `public.reserve_report_media_slot(...)`
   - authenticated only
   - accepts `client_media_draft_id`
+  - rejects new reservations after `8` attachments per report while still returning the existing row for the same draft id
   - returns the existing reserved slot when the same report replays the same `client_media_draft_id`
 
 Replay-safety columns and indexes:
@@ -783,6 +796,41 @@ Phase 11 application boundary:
 - screens still go through repositories, flow services, and `packages/upload-core`
 - screens may not call `public.submit_spring_report(...)` or `public.reserve_report_media_slot(...)` directly
 - copied local attachment URIs are an app-local implementation detail and do not become shared contract fields outside the explicit idempotency keys
+
+## Phase 14 Upload Hardening Boundary
+
+Phase 14 keeps upload ownership split cleanly:
+
+- `packages/upload-core`
+  - owns upload policy, validation, prepared-asset types, and provider-neutral upload interfaces
+- `apps/mobile/src/infrastructure/upload/`
+  - owns the concrete Expo image-preprocessing adapter
+  - may resize and JPEG re-encode a picked image once before queueing/upload
+- screens and presenters
+  - may not call Expo image processing, Supabase storage, or finalize RPCs directly
+
+Phase 14 preprocessing rules:
+
+- preprocess only when the source image exceeds:
+  - longest edge `2048`
+  - or `12 MiB`
+- run exactly one preprocessing pass:
+  - resize to longest edge `2048`
+  - JPEG re-encode at quality `0.75`
+  - EXIF stripped through re-encoding
+- reject locally if the transformed result still exceeds `15 MiB`
+- final MIME and size enforcement still remains authoritative at the Supabase storage bucket boundary
+
+Phase 14 queue hardening rules:
+
+- attachment delivery state may now persist:
+  - local ready
+  - slot reserved
+  - binary uploaded
+  - finalize pending
+  - finalized
+- if binary upload succeeds but finalize fails, replay retries only finalize instead of re-uploading the file
+- this delivery metadata remains app-local and never becomes canonical spring or report state
 
 ## Development Session Bootstrap
 

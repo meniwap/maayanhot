@@ -1,3 +1,4 @@
+import { toPreparedUploadAsset } from '@maayanhot/upload-core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { springLightTheme, type Direction, type ThemeTokens } from '@maayanhot/design-tokens';
 import { ThemeProvider } from '@maayanhot/ui';
@@ -62,7 +63,7 @@ export const renderWithTheme = async (ui: ReactElement, options: RenderWithTheme
   const offlineQueueValue: ContextType<typeof OfflineReportQueueContext> = {
     discardPreparedAttachment: async () => undefined,
     discardQueuedReport: async () => undefined,
-    prepareAttachment: async (asset) => asset,
+    prepareAttachment: async (asset) => toPreparedUploadAsset(asset),
     retryQueuedReport: async () => undefined,
     snapshot: offlineQueueSnapshot,
     submitDraft: async () => ({

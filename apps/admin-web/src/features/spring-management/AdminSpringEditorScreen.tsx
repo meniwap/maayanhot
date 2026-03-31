@@ -14,6 +14,7 @@ import {
   AdminStack,
   AdminTextArea,
 } from '../../components/AdminPrimitives';
+import { useAdminWebObservability } from '../../infrastructure/observability/AdminWebObservabilityProvider';
 import { springRepository } from '../../infrastructure/supabase/repositories/spring-repository';
 
 const createSpringFlow = new CreateSpringFlow(springRepository);
@@ -32,6 +33,7 @@ export function AdminSpringEditorScreen({
   onSaved,
   springId = null,
 }: AdminSpringEditorScreenProps) {
+  const observability = useAdminWebObservability();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -145,6 +147,14 @@ export function AdminSpringEditorScreen({
         queryClient.invalidateQueries({ queryKey: ['public-spring-detail', spring.id] }),
       ]);
       setSuccessMessage(mode === 'edit' ? 'השינויים נשמרו.' : 'המעיין נוצר בהצלחה.');
+      void observability.analytics.track({
+        metadata: {
+          isPublished: spring.isPublished,
+          mode,
+          springId: spring.id,
+        },
+        name: 'admin_spring_saved',
+      });
       onSaved(spring.id, mode === 'edit' ? 'updated' : 'created');
     },
   });
@@ -180,6 +190,15 @@ export function AdminSpringEditorScreen({
     try {
       await saveMutation.mutateAsync();
     } catch (error) {
+      void observability.errors.captureError(error, {
+        action: mode === 'edit' ? 'update_spring' : 'create_spring',
+        feature: 'admin_spring_management',
+        metadata: {
+          mode,
+          springId,
+        },
+        severity: 'error',
+      });
       setErrorMessage(error instanceof Error ? error.message : 'שמירת המעיין נכשלה.');
     }
   };

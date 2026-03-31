@@ -12,9 +12,18 @@ export type UploadAssetDescriptor = {
   capturedAt: IsoTimestampString | null;
 };
 
+export type PreparedUploadAsset = UploadAssetDescriptor & {
+  exifStripped: boolean;
+  originalByteSize: number | null;
+  originalHeight: number | null;
+  originalMimeType: string | null;
+  originalWidth: number | null;
+  preprocessStatus: 'accepted' | 'optimized';
+};
+
 export type PendingUpload = {
   queueId: string;
-  asset: UploadAssetDescriptor;
+  asset: PreparedUploadAsset;
   attemptCount: number;
   lastErrorCode: string | null;
   mediaId: MediaId;
@@ -48,16 +57,34 @@ export type PrivateMediaPreviewResult = {
 };
 
 export type UploadPolicy = {
-  maxBytes: number;
   allowedMimeTypes: string[];
-  stripExif: boolean;
   maxImageDimension: number | null;
+  maxBytes: number;
+  preprocessTriggerBytes: number;
+  finalMaxBytes: number;
+  jpegQuality: number;
+  stripExif: boolean;
+  targetMimeType: 'image/jpeg';
 };
 
+export type ImageTransformPolicy = Pick<
+  UploadPolicy,
+  | 'finalMaxBytes'
+  | 'jpegQuality'
+  | 'maxImageDimension'
+  | 'preprocessTriggerBytes'
+  | 'stripExif'
+  | 'targetMimeType'
+>;
+
 export interface UploadAdapter {
-  validate(asset: UploadAssetDescriptor, policy: UploadPolicy): Promise<void> | void;
+  validate(asset: PreparedUploadAsset, policy: UploadPolicy): Promise<void> | void;
   upload(pending: PendingUpload): Promise<UploadResult>;
   retry(pending: PendingUpload): Promise<UploadResult>;
+}
+
+export interface UploadAssetPreprocessor {
+  prepare(asset: UploadAssetDescriptor, policy: UploadPolicy): Promise<PreparedUploadAsset>;
 }
 
 export interface PrivateMediaPreviewAdapter {
@@ -96,12 +123,59 @@ const ensureMimeAllowed = (asset: UploadAssetDescriptor, policy: UploadPolicy) =
 };
 
 const ensureSizeAllowed = (asset: UploadAssetDescriptor, policy: UploadPolicy) => {
-  if (typeof asset.byteSize === 'number' && asset.byteSize > policy.maxBytes) {
+  if (typeof asset.byteSize === 'number' && asset.byteSize > policy.finalMaxBytes) {
     throw new UploadValidationError(
       'file_too_large',
       'The selected media exceeds the upload size limit.',
     );
   }
+};
+
+const ensureDimensionsAllowed = (asset: UploadAssetDescriptor, policy: UploadPolicy) => {
+  if (policy.maxImageDimension === null) {
+    return;
+  }
+
+  if (
+    (typeof asset.width === 'number' && asset.width > policy.maxImageDimension) ||
+    (typeof asset.height === 'number' && asset.height > policy.maxImageDimension)
+  ) {
+    throw new UploadValidationError(
+      'image_dimensions_exceed_limit',
+      'The selected image exceeds the maximum supported dimensions.',
+    );
+  }
+};
+
+export const toPreparedUploadAsset = (
+  asset: UploadAssetDescriptor,
+  overrides: Partial<PreparedUploadAsset> = {},
+): PreparedUploadAsset => ({
+  ...asset,
+  exifStripped: overrides.exifStripped ?? false,
+  originalByteSize: overrides.originalByteSize ?? asset.byteSize,
+  originalHeight: overrides.originalHeight ?? asset.height,
+  originalMimeType: overrides.originalMimeType ?? asset.mimeType,
+  originalWidth: overrides.originalWidth ?? asset.width,
+  preprocessStatus: overrides.preprocessStatus ?? 'accepted',
+});
+
+export const shouldPreprocessAsset = (
+  asset: UploadAssetDescriptor,
+  policy: ImageTransformPolicy,
+) => {
+  const maxImageDimension = policy.maxImageDimension ?? 0;
+
+  if (asset.kind !== 'image') {
+    return false;
+  }
+
+  const largestDimension = Math.max(asset.width ?? 0, asset.height ?? 0);
+
+  return (
+    largestDimension > maxImageDimension ||
+    (typeof asset.byteSize === 'number' && asset.byteSize > policy.preprocessTriggerBytes)
+  );
 };
 
 const uploadPendingAsset = async (
@@ -122,7 +196,7 @@ const uploadPendingAsset = async (
 
   return {
     byteSize: pending.asset.byteSize,
-    exifStripped: false,
+    exifStripped: pending.asset.exifStripped,
     height: pending.asset.height,
     kind: pending.asset.kind,
     mediaId: pending.mediaId,
@@ -134,9 +208,13 @@ const uploadPendingAsset = async (
 
 export const reportImageUploadPolicy: UploadPolicy = {
   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/heic'],
+  finalMaxBytes: 15 * 1024 * 1024,
+  jpegQuality: 0.75,
   maxBytes: 15 * 1024 * 1024,
-  maxImageDimension: null,
-  stripExif: false,
+  maxImageDimension: 2048,
+  preprocessTriggerBytes: 12 * 1024 * 1024,
+  stripExif: true,
+  targetMimeType: 'image/jpeg',
 };
 
 export const createSupabaseUploadAdapter = (
@@ -145,16 +223,19 @@ export const createSupabaseUploadAdapter = (
 ): UploadAdapter => ({
   validate: (asset) => {
     ensureMimeAllowed(asset, policy);
+    ensureDimensionsAllowed(asset, policy);
     ensureSizeAllowed(asset, policy);
   },
   retry: async (pending) => {
     ensureMimeAllowed(pending.asset, policy);
+    ensureDimensionsAllowed(pending.asset, policy);
     ensureSizeAllowed(pending.asset, policy);
 
     return uploadPendingAsset(client, pending);
   },
   upload: async (pending) => {
     ensureMimeAllowed(pending.asset, policy);
+    ensureDimensionsAllowed(pending.asset, policy);
     ensureSizeAllowed(pending.asset, policy);
 
     return uploadPendingAsset(client, pending);

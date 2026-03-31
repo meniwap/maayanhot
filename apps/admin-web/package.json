@@ -15,6 +15,7 @@
     "@maayanhot/contracts": "workspace:*",
     "@maayanhot/design-tokens": "workspace:*",
     "@maayanhot/domain": "workspace:*",
+    "@maayanhot/observability-core": "workspace:*",
     "@maayanhot/upload-core": "workspace:*",
     "@maayanhot/use-cases": "workspace:*",
     "@supabase/supabase-js": "2.100.1",

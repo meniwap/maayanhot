@@ -5,6 +5,7 @@ import type { UserProfile } from '@maayanhot/domain';
 import type { PropsWithChildren } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { useAdminWebObservability } from '../observability/AdminWebObservabilityProvider';
 import { getSupabaseClient, isSupabaseClientConfigured } from '../supabase/client';
 import { userProfileRepository } from '../supabase/repositories/user-profile-repository';
 
@@ -65,6 +66,7 @@ const toSnapshot = (
 };
 
 export function AdminSessionProvider({ children }: PropsWithChildren) {
+  const observability = useAdminWebObservability();
   const [snapshot, setSnapshot] = useState<AdminSessionSnapshot>(() => defaultSnapshot);
   const refreshSnapshot = useCallback(async () => {
     const client = getSupabaseClient();
@@ -111,10 +113,31 @@ export function AdminSessionProvider({ children }: PropsWithChildren) {
         });
 
         if (error) {
+          void observability.analytics.track({
+            metadata: {
+              email,
+            },
+            name: 'admin_login_failed',
+          });
+          void observability.errors.captureError(error, {
+            action: 'sign_in',
+            code: error.code ?? null,
+            feature: 'admin_auth',
+            metadata: {
+              email,
+            },
+            severity: 'warning',
+          });
           throw new Error(error.message);
         }
 
         await refreshSnapshot();
+        void observability.analytics.track({
+          metadata: {
+            email,
+          },
+          name: 'admin_login_succeeded',
+        });
       },
       signOut: async () => {
         if (!isSupabaseClientConfigured()) {
@@ -132,7 +155,7 @@ export function AdminSessionProvider({ children }: PropsWithChildren) {
       },
       snapshot,
     }),
-    [refreshSnapshot, snapshot],
+    [observability, refreshSnapshot, snapshot],
   );
 
   return <AdminSessionContext.Provider value={value}>{children}</AdminSessionContext.Provider>;

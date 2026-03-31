@@ -22,11 +22,17 @@ export default defineConfig({
       '@maayanhot/map-core': fileURLToPath(
         new URL('./packages/map-core/src/index.ts', import.meta.url),
       ),
+      '@maayanhot/observability-core': fileURLToPath(
+        new URL('./packages/observability-core/src/index.ts', import.meta.url),
+      ),
       '@maplibre/maplibre-react-native': fileURLToPath(
         new URL('./tests/mocks/maplibre-react-native.ts', import.meta.url),
       ),
       'expo-file-system/legacy': fileURLToPath(
         new URL('./tests/mocks/expo-file-system-legacy.ts', import.meta.url),
+      ),
+      'expo-image-manipulator': fileURLToPath(
+        new URL('./tests/mocks/expo-image-manipulator.ts', import.meta.url),
       ),
       'expo-image-picker': fileURLToPath(
         new URL('./tests/mocks/expo-image-picker.ts', import.meta.url),

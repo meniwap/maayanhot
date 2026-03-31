@@ -93,6 +93,16 @@ The route structure below is planned for `expo-router`. Exact filenames belong t
   - queued admin spring creation
   - background sync UX
   - public exposure of queued, pending, or rejected content
+- Phase 14 hardening adds:
+  - explicit attachment outcomes in report compose:
+    - accepted unchanged
+    - optimized once before upload
+    - rejected after one-pass optimization if still too large
+  - clearer local-only delivery messaging in spring detail for:
+    - retry scheduled
+    - finalize pending
+    - permanent failure
+    - too-large-after-optimization
 
 ## Admin Web Baseline
 
@@ -141,6 +151,7 @@ Phase 13 moderation-web must not add:
 - ad hoc direct moderation writes
 - raw table browsing outside the authorized workflow
 - public/mobile exposure of staff-only review data
+- vendor-specific analytics or crash SDK logic in presentational components
 
 ## Container / Presenter Boundary
 
@@ -151,6 +162,7 @@ Containers may:
 - own `TanStack Query` hooks and mutation orchestration
 - own platform permission flows
 - own navigation decisions
+- emit observability hooks through app-local abstractions
 
 Presenters may:
 
@@ -166,6 +178,7 @@ Presenters may not:
 - make network requests
 - open external apps directly
 - compute business rules like trust progression or spring status derivation
+- call observability vendors directly
 
 Phase 13 web note:
 

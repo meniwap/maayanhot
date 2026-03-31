@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { createMemoryObservability } from '@maayanhot/observability-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AdminModerationPage from '../../apps/admin-web/app/admin/moderation/page';
@@ -207,6 +208,7 @@ describe('admin moderation web flows', () => {
       expiresAt: '2026-03-27T09:00:00.000Z',
       signedUrl: 'https://example.com/private-preview.jpg',
     });
+    const memoryObservability = createMemoryObservability();
 
     renderAdmin(
       <AdminModerationReviewScreen
@@ -216,6 +218,7 @@ describe('admin moderation web flows', () => {
         reportId="report-2"
       />,
       {
+        observability: memoryObservability.observability,
         snapshot: createAuthenticatedSnapshot('admin'),
       },
     );
@@ -237,5 +240,8 @@ describe('admin moderation web flows', () => {
       storagePath: 'user-1/report-2/media-1.jpg',
     });
     expect(onDecisionComplete).toHaveBeenCalledWith('approve');
+    expect(memoryObservability.analytics.map((entry) => entry.name)).toContain(
+      'moderation_decision_submitted',
+    );
   });
 });

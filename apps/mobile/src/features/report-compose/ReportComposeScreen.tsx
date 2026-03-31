@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { UploadValidationError, type UploadAssetDescriptor } from '@maayanhot/upload-core';
 import {
   AppText,
   Button,
@@ -32,7 +33,41 @@ type ReportComposeScreenProps = {
 
 type AttachmentViewState = ReportAttachmentDraft;
 
-const readPickerAsset = (asset: ImagePicker.ImagePickerAsset): AttachmentViewState => ({
+const toAttachmentMessage = (attachments: AttachmentViewState[]) => {
+  if (attachments.length === 0) {
+    return null;
+  }
+
+  if (attachments.every((attachment) => attachment.preprocessStatus === 'accepted')) {
+    return 'התמונה נשמרה ללא עיבוד נוסף.';
+  }
+
+  if (attachments.every((attachment) => attachment.preprocessStatus === 'optimized')) {
+    return 'התמונה הוקטנה ודחוסה פעם אחת לפני ההעלאה כדי לשמור על גבולות Phase 14.';
+  }
+
+  return 'חלק מהתמונות נשמרו כפי שהן וחלק עברו הקטנה ודחיסה חד-פעמית לפני ההעלאה.';
+};
+
+const toAttachmentErrorMessage = (error: unknown) => {
+  if (error instanceof UploadValidationError) {
+    if (error.code === 'file_too_large_after_processing') {
+      return 'התמונה נדחתה כי גם אחרי הקטנה ודחיסה חד-פעמית היא נשארה גדולה מדי.';
+    }
+
+    if (error.code === 'mime_type_not_allowed') {
+      return 'סוג הקובץ שבחרתם לא נתמך.';
+    }
+
+    if (error.code === 'image_dimensions_exceed_limit') {
+      return 'מימדי התמונה עדיין חורגים מהגבול הנתמך.';
+    }
+  }
+
+  return error instanceof Error ? error.message : 'שמירת התמונה המקומית נכשלה.';
+};
+
+const readPickerAsset = (asset: ImagePicker.ImagePickerAsset): UploadAssetDescriptor => ({
   byteSize: asset.fileSize ?? null,
   capturedAt: asset.exif?.DateTimeOriginal ?? null,
   height: asset.height ?? null,
@@ -61,7 +96,7 @@ export function ReportComposeScreen({
   const [waterPresence, setWaterPresence] = useState<'water' | 'no_water' | 'unknown'>('unknown');
   const [note, setNote] = useState('');
   const [attachments, setAttachments] = useState<AttachmentViewState[]>([]);
-  const [permissionMessage, setPermissionMessage] = useState<string | null>(null);
+  const [attachmentMessage, setAttachmentMessage] = useState<string | null>(null);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [isPreparingAttachment, setIsPreparingAttachment] = useState(false);
@@ -94,7 +129,7 @@ export function ReportComposeScreen({
   });
 
   const attachAsset = async (source: 'camera' | 'library') => {
-    setPermissionMessage(null);
+    setAttachmentMessage(null);
 
     const permissionResult =
       source === 'camera'
@@ -102,7 +137,7 @@ export function ReportComposeScreen({
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.status !== 'granted') {
-      setPermissionMessage(source === 'camera' ? 'הרשאת מצלמה נדחתה.' : 'הרשאת גלריה נדחתה.');
+      setAttachmentMessage(source === 'camera' ? 'הרשאת מצלמה נדחתה.' : 'הרשאת גלריה נדחתה.');
       return;
     }
 
@@ -134,8 +169,9 @@ export function ReportComposeScreen({
       );
 
       setAttachments((current) => [...current, ...preparedAttachments]);
+      setAttachmentMessage(toAttachmentMessage(preparedAttachments));
     } catch (error) {
-      setPermissionMessage(error instanceof Error ? error.message : 'שמירת התמונה המקומית נכשלה.');
+      setAttachmentMessage(toAttachmentErrorMessage(error));
     } finally {
       setIsPreparingAttachment(false);
     }
@@ -258,9 +294,9 @@ export function ReportComposeScreen({
               variant="secondary"
             />
           </Inline>
-          {permissionMessage ? (
+          {attachmentMessage ? (
             <AppText testID="report-permission-message" tone="secondary" variant="bodySm">
-              {permissionMessage}
+              {attachmentMessage}
             </AppText>
           ) : null}
           {attachments.length === 0 ? (
@@ -270,6 +306,11 @@ export function ReportComposeScreen({
           ) : (
             attachments.map((attachment) => (
               <PhotoTile
+                caption={
+                  attachment.preprocessStatus === 'optimized'
+                    ? 'הוקטנה ודחוסה לפני ההעלאה.'
+                    : 'נשמרה ללא עיבוד נוסף.'
+                }
                 key={attachment.localId}
                 onRemove={() => handleRemoveAttachment(attachment)}
                 status="ready"

@@ -18,6 +18,7 @@ import {
   AdminStack,
   AdminTextArea,
 } from '../../components/AdminPrimitives';
+import { useAdminWebObservability } from '../../infrastructure/observability/AdminWebObservabilityProvider';
 import { getSupabaseClient } from '../../infrastructure/supabase/client';
 import { moderationQueueRepository } from '../../infrastructure/supabase/repositories/moderation-queue-repository';
 import { springReportRepository } from '../../infrastructure/supabase/repositories/spring-report-repository';
@@ -42,6 +43,7 @@ export function AdminModerationReviewScreen({
   previewAdapter?: PrivateMediaPreviewAdapter;
   reportId: string;
 }) {
+  const observability = useAdminWebObservability();
   const queryClient = useQueryClient();
   const resolvedPreviewAdapter = useMemo(
     () => previewAdapter ?? createSupabasePrivateMediaPreviewAdapter(getSupabaseClient()),
@@ -104,7 +106,22 @@ export function AdminModerationReviewScreen({
 
     try {
       await decisionMutation.mutateAsync('approve');
+      void observability.analytics.track({
+        metadata: {
+          decision: 'approve',
+          reportId,
+        },
+        name: 'moderation_decision_submitted',
+      });
     } catch (error) {
+      void observability.errors.captureError(error, {
+        action: 'approve_report',
+        feature: 'admin_moderation',
+        metadata: {
+          reportId,
+        },
+        severity: 'error',
+      });
       setSubmissionMessage(error instanceof Error ? error.message : 'אישור הדיווח נכשל.');
     }
   };
@@ -121,7 +138,24 @@ export function AdminModerationReviewScreen({
 
     try {
       await decisionMutation.mutateAsync('reject');
+      void observability.analytics.track({
+        metadata: {
+          decision: 'reject',
+          reasonCode,
+          reportId,
+        },
+        name: 'moderation_decision_submitted',
+      });
     } catch (error) {
+      void observability.errors.captureError(error, {
+        action: 'reject_report',
+        feature: 'admin_moderation',
+        metadata: {
+          reasonCode,
+          reportId,
+        },
+        severity: 'error',
+      });
       setSubmissionMessage(error instanceof Error ? error.message : 'דחיית הדיווח נכשלה.');
     }
   };

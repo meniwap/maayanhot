@@ -1,6 +1,12 @@
 import { QueryClient } from '@tanstack/react-query';
 import type { SpringMedia, SpringReportRepository } from '@maayanhot/domain';
-import type { UploadAdapter } from '@maayanhot/upload-core';
+import { createMemoryObservability } from '@maayanhot/observability-core';
+import {
+  UploadValidationError,
+  toPreparedUploadAsset,
+  type UploadAdapter,
+  type UploadAssetPreprocessor,
+} from '@maayanhot/upload-core';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -8,17 +14,18 @@ import {
   type ReportAttachmentDraft,
 } from '../../apps/mobile/src/infrastructure/offline/offline-report-queue';
 
-const makeAttachment = (overrides: Partial<ReportAttachmentDraft> = {}): ReportAttachmentDraft => ({
-  byteSize: 1_234,
-  capturedAt: '2026-03-27T09:00:00.000Z',
-  height: 900,
-  kind: 'image',
-  localId: 'asset-1',
-  localUri: 'file:///tmp/photo-1.jpg',
-  mimeType: 'image/jpeg',
-  width: 1200,
-  ...overrides,
-});
+const makeAttachment = (overrides: Partial<ReportAttachmentDraft> = {}): ReportAttachmentDraft =>
+  toPreparedUploadAsset({
+    byteSize: 1_234,
+    capturedAt: '2026-03-27T09:00:00.000Z',
+    height: 900,
+    kind: 'image',
+    localId: 'asset-1',
+    localUri: 'file:///tmp/photo-1.jpg',
+    mimeType: 'image/jpeg',
+    width: 1200,
+    ...overrides,
+  });
 
 const makeStorage = () => {
   const values = new Map<string, string>();
@@ -64,11 +71,12 @@ const makeFileSystem = () => {
   };
 };
 
-const makeDependencies = () => {
+const makeDependencies = (overrides: { assetPreprocessor?: UploadAssetPreprocessor } = {}) => {
   const storage = makeStorage();
   const fileSystem = makeFileSystem();
   const queryClient = new QueryClient();
   const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+  const memoryObservability = createMemoryObservability();
   let now = Date.parse('2026-03-27T10:00:00.000Z');
 
   const sampleMedia: SpringMedia = {
@@ -146,7 +154,14 @@ const makeDependencies = () => {
   } satisfies UploadAdapter;
 
   const controller = new OfflineReportQueueController({
+    analyticsTracker: memoryObservability.observability.analytics,
+    ...(overrides.assetPreprocessor
+      ? {
+          assetPreprocessor: overrides.assetPreprocessor,
+        }
+      : {}),
     clearScheduled: (handle) => clearTimeout(handle),
+    errorReporter: memoryObservability.observability.errors,
     fileSystem,
     now: () => now,
     queryClient,
@@ -160,6 +175,7 @@ const makeDependencies = () => {
     controller,
     fileSystem,
     invalidateSpy,
+    memoryObservability,
     queryClient,
     reportRepository,
     setNow: (value: number) => {
@@ -274,6 +290,15 @@ describe('phase 11 offline report queue', () => {
     expect(queued?.status).toBe('retry_scheduled');
     expect(queued?.attemptCount).toBe(1);
     expect(queued?.nextAttemptAt).not.toBeNull();
+    expect(setup.memoryObservability.analytics.map((entry) => entry.name)).toContain(
+      'report_queue_retry_scheduled',
+    );
+    expect(setup.memoryObservability.errors).toHaveLength(1);
+    expect(
+      setup.memoryObservability.analytics.find(
+        (entry) => entry.name === 'report_queue_retry_scheduled',
+      )?.metadata,
+    ).not.toHaveProperty('note');
   });
 
   it('reuses the created report and reserved media slot on retry after partial progress', async () => {
@@ -309,5 +334,158 @@ describe('phase 11 offline report queue', () => {
     expect(setup.invalidateSpy).toHaveBeenCalled();
     expect(setup.controller.getSnapshot().items).toHaveLength(0);
     expect(setup.controller.getSnapshot().recentDeliveries).toHaveLength(1);
+  });
+
+  it('retries finalize without re-uploading the binary after upload success', async () => {
+    const setup = makeDependencies();
+
+    setup.reportRepository.finalizeMediaUpload
+      .mockRejectedValueOnce(new Error('temporary finalize failure'))
+      .mockResolvedValueOnce({
+        byteSize: 1_234,
+        capturedAt: '2026-03-27T09:00:00.000Z',
+        createdAt: '2026-03-27T10:01:00.000Z',
+        exifStripped: true,
+        height: 900,
+        id: 'media-1',
+        mediaType: 'image',
+        publicUrl: null,
+        reportId: 'report-1',
+        springId: 'spring-1',
+        storageBucket: 'report-media',
+        storagePath: 'user-1/report-1/media-1.jpg',
+        uploadState: 'uploaded',
+        width: 1200,
+      });
+
+    await setup.controller.hydrate();
+    await setup.controller.setActiveUser('user-1');
+
+    await setup.controller.submitDraft(
+      {
+        attachments: [makeAttachment()],
+        note: 'finalize later',
+        observedAt: '2026-03-27T09:00:00.000Z',
+        springId: 'spring-1',
+        waterPresence: 'water',
+      },
+      'user-1',
+    );
+
+    const queued = setup.controller.getSnapshot().items[0];
+
+    expect(queued?.status).toBe('retry_scheduled');
+    expect(queued?.attachments[0]?.deliveryState).toBe('finalize_pending');
+    expect(setup.uploadAdapter.upload).toHaveBeenCalledTimes(1);
+    expect(setup.reportRepository.finalizeMediaUpload).toHaveBeenCalledTimes(1);
+
+    await setup.controller.retryNow(queued!.queueId);
+
+    expect(setup.uploadAdapter.upload).toHaveBeenCalledTimes(1);
+    expect(setup.reportRepository.finalizeMediaUpload).toHaveBeenCalledTimes(2);
+    expect(setup.controller.getSnapshot().items).toHaveLength(0);
+  });
+
+  it('marks missing local assets as permanent failures and still allows discard cleanup', async () => {
+    const setup = makeDependencies();
+
+    setup.uploadAdapter.upload.mockRejectedValueOnce(
+      new UploadValidationError('asset_fetch_failed', 'Unable to read the local asset.'),
+    );
+
+    await setup.controller.hydrate();
+    await setup.controller.setActiveUser('user-1');
+
+    await setup.controller.submitDraft(
+      {
+        attachments: [makeAttachment()],
+        note: 'missing asset',
+        observedAt: '2026-03-27T09:00:00.000Z',
+        springId: 'spring-1',
+        waterPresence: 'water',
+      },
+      'user-1',
+    );
+
+    const queued = setup.controller.getSnapshot().items[0];
+
+    expect(queued?.status).toBe('failed_permanent');
+    expect(setup.memoryObservability.analytics.map((entry) => entry.name)).toContain(
+      'report_queue_failed_permanent',
+    );
+    expect(
+      setup.memoryObservability.analytics.find(
+        (entry) => entry.name === 'report_queue_failed_permanent',
+      )?.metadata,
+    ).not.toHaveProperty('note');
+    await setup.controller.discard(queued!.queueId);
+    expect(setup.fileSystem.deleted.length).toBeGreaterThan(0);
+    expect(setup.controller.getSnapshot().items).toHaveLength(0);
+  });
+
+  it('tracks optimized attachments without leaking free-text report content', async () => {
+    const setup = makeDependencies({
+      assetPreprocessor: {
+        prepare: vi.fn(async (asset) =>
+          toPreparedUploadAsset(
+            {
+              ...asset,
+              byteSize: 5_000_000,
+              localUri: 'file:///tmp/optimized-photo-1.jpg',
+              mimeType: 'image/jpeg',
+            },
+            {
+              exifStripped: true,
+              originalByteSize: asset.byteSize,
+              originalHeight: asset.height,
+              originalMimeType: asset.mimeType,
+              originalWidth: asset.width,
+              preprocessStatus: 'optimized',
+            },
+          ),
+        ),
+      },
+    });
+
+    const prepared = await setup.controller.prepareAttachment(makeAttachment());
+
+    expect(prepared.preprocessStatus).toBe('optimized');
+    const preprocessEvent = setup.memoryObservability.analytics.find(
+      (entry) => entry.name === 'report_attachment_preprocessed',
+    );
+
+    expect(preprocessEvent?.metadata).toMatchObject({
+      optimizedByteSize: 5_000_000,
+      originalByteSize: 1_234,
+    });
+    expect(preprocessEvent?.metadata).not.toHaveProperty('note');
+  });
+
+  it('tracks oversized attachment rejection before queueing', async () => {
+    const setup = makeDependencies({
+      assetPreprocessor: {
+        prepare: vi.fn(async () => {
+          throw new UploadValidationError(
+            'file_too_large_after_processing',
+            'Still too large after optimization.',
+          );
+        }),
+      },
+    });
+
+    await expect(setup.controller.prepareAttachment(makeAttachment())).rejects.toEqual(
+      expect.objectContaining({
+        code: 'file_too_large_after_processing',
+      }),
+    );
+
+    const rejectionEvent = setup.memoryObservability.analytics.find(
+      (entry) => entry.name === 'report_attachment_rejected_large',
+    );
+
+    expect(rejectionEvent?.metadata).toEqual({
+      originalByteSize: 1_234,
+    });
+    expect(setup.memoryObservability.errors).toHaveLength(1);
   });
 });
